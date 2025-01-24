@@ -1,7 +1,25 @@
 [package]
 name = "hnefatafl"
-version = "0.1.0"
-edition = "2024"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "A crate for building software for the tafl family of board games"
+repository = "https://github.com/bunburya/hnefatafl-rs"
+readme = "README.md"
+keywords = ["tafl", "hnefatafl", "gamedev", "boardgames"]
+categories = ["game-development", "game-engines"]
 
 [dependencies]
-tch = "0.18.1"
+primitive-types = "0.13.1"
+
+[features]
+demo = []
+
+[lib]
+name = "hnefatafl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hnefatafl-demo"
+path = "src/main.rs"
+required-features = ["demo"]
