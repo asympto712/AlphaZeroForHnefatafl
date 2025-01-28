@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 primitive-types = "0.13.1"
 tch = "0.18.1"
-hnefatafl = { path = "rust_part/src/hnefatafl-rs" }
 
 [features]
 demo = []
