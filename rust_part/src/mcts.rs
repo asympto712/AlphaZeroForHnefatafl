@@ -5,7 +5,7 @@ use rand::prelude::*;
 use tch::{CModule, Tensor, Kind, Device};
 
 type Action = u32;
-type State = Vec<u32>;  // Here we assume the state is already converted into matrix representation & flattened 
+type State = Vec<Vec<u32>>;  // Here we assume the state is already converted into matrix representation & flattened 
 
 const C_PUCT: f32 = 0.3;
 
@@ -55,7 +55,13 @@ fn search(game: &mut Game, node: &mut Node, nnmodel: &CModule) -> f32 {
         let reward = game.player * game.reward(Node.state); // Assumes game.reward returns the reward from the ATTACKER's perspective
         return -1 * reward;
     }
-
+    // TODO: add a logic for when there IS no valid_actions
+    // TEMPORARY SOLUTION
+    if node.valid_actions.is_empty() {
+        let reward = -1;
+        return -1 * reward;
+    }
+    
     let action = node.valid_actions
             .iter()
             .max_by(|a, b| {
@@ -81,13 +87,18 @@ fn search(game: &mut Game, node: &mut Node, nnmodel: &CModule) -> f32 {
 }
 
 fn expand(parent: &mut Node<Action, State>, action: &Action, game: &Game, nnmodel: &CModule) {
-    let (valid_actions, action_probs, reward) = model_predict(game, nnmodel);
+    let (valid_actions, pi, reward) = model_predict(game, nnmodel);
     let num_valid_actions = valid_actions.sum();
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
     let mut action_Qs = HashMap::with_capacity(num_valid_actions);
-    for action in valid_actions {
-        action_counts.insert(*action, 0.0);
-        action_Qs.insert(*action, 0.0);
+    let mut action_probs = HashMap::with_capacity(num_valid_actions);
+
+    if !valid_actions.is_empty() {
+        for action in valid_actions {
+            action_counts.insert(*action, 0.0);
+            action_Qs.insert(*action, 0.0);
+            action_probs.insert(*action, pi[actions.try_into().expect("could not convert action into an integer")]);
+        }
     }
 
     let mut new_node: Node<Action, State> = Node{
@@ -108,7 +119,7 @@ fn expand(parent: &mut Node<Action, State>, action: &Action, game: &Game, nnmode
 fn model_predict(game: &Game, nnmodel: &CModule) -> (Vec<f32>, Vec<f32>, f32) {
 
     // Preparing input Tensors
-    let board = Tensor::of_data(game.state, &[7,7], (Kind::Float32, Device::Cpu));
+    let board = Tensor::from_slice2(&game.state, &[7,7], (Kind::Float32, Device::Cpu)); //Assuming game.state is a 2-dimensional vector
     let cond: [bool; 1] = if game.player == 1 {[true]} else {[false]};
     let cond: Tensor = Tensor::from_slice(&cond);
 
@@ -121,22 +132,27 @@ fn model_predict(game: &Game, nnmodel: &CModule) -> (Vec<f32>, Vec<f32>, f32) {
     let reward = f32::try_from(reward).expect("Could not convert value tensor to f32");
 
     let valid_actions = game.get_valid_actions(game.state);
+
+    if valid_actions.is_empty() {
+        return (valid_actions, Vec::new(), 0.0)
+    }
+
     let valid_actions_for_masking: Vec<f32> = game.get_valid_actions_for_masking(game.state).try_into().expect("could not convert mask into Vec<f32>"); 
     // This should output a correct valid moves depending on the variable game (-> whose turn it is)  
 
-    let mut action_probs: Vec<f32> = prob.iter()
+    let mut pi: Vec<f32> = prob.iter()
         .zip(valid_actions_for_masking.iter())
         .map(|(p, v)| p * v)
         .collect();
 
-    let sum_probs = actions_probs.sum();
+    let sum_probs = pi.sum();
     if sum_probs > 0 {
-        actions_probs /= sum_probs;                           // renormalize
+        pi /= sum_probs;                           // renormalize
     } else {                                                // Contingency for when all the actions with non-zero probabilities are masked
         let num_valid_actions = valid_actions_for_masking.sum();
-        actions_probs = valid_actions_for_masking / num_valid_actions;
+        pi = valid_actions_for_masking / num_valid_actions;
     }
-    return (valid_actions, action_probs, reward)
+    return (valid_actions, pi, reward)
 }
 
 fn get_improved_policy(root: Node) -> Vec<f32> {
