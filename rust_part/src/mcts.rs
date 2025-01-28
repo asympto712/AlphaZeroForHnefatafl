@@ -1,8 +1,19 @@
 #![allow(non_snake_case)]
 
+use hnefatafl::game::{Game, SmallBasicGame};
+use hnefatafl::game::GameOutcome::{Draw, Win};
+use hnefatafl::game::GameStatus::Over;
+use std::any::type_name;
+mod support;
+
 use std::collections::HashMap;
 use rand::prelude::*;
 use tch::{CModule, Tensor, Kind, Device};
+
+
+
+
+
 
 type Action = u32;
 type State = Vec<Vec<u32>>;  // Here we assume the state is already converted into matrix representation & flattened 

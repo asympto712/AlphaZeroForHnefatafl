@@ -278,8 +278,16 @@ dependencies = [
 
 [[package]]
 name = "hnefatafl"
+version = "0.0.1"
+dependencies = [
+ "primitive-types",
+]
+
+[[package]]
+name = "hnefatafl"
 version = "0.1.0"
 dependencies = [
+ "hnefatafl 0.0.1",
  "primitive-types",
  "tch",
 ]
