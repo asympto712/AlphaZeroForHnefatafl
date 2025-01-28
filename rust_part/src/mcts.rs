@@ -88,7 +88,7 @@ fn search(game: &mut Game, node: &mut Node, nnmodel: &CModule) -> f32 {
 
 fn expand(parent: &mut Node<Action, State>, action: &Action, game: &Game, nnmodel: &CModule) {
     let (valid_actions, pi, reward) = model_predict(game, nnmodel);
-    let num_valid_actions = valid_actions.sum();
+    let num_valid_actions = valid_actions.len();
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
     let mut action_Qs = HashMap::with_capacity(num_valid_actions);
     let mut action_probs = HashMap::with_capacity(num_valid_actions);
