@@ -99,9 +99,6 @@ pub mod rules {
         linnaean_capture: true
     };
 
-
-
-    /// Rules for Koch Hnefatafl.
     pub const KOCH: Ruleset = Ruleset {
         edge_escape: false,
         king_strength: StrongByThrone,
@@ -117,12 +114,13 @@ pub mod rules {
         },
         slow_pieces: PieceSet::none(),
         starting_side: Attacker,
-        enclosure_win: Some(WithoutEdgeAccess),
-        repetition_rule: Some(RepetitionRule { n_repetitions: 3, is_loss: true }),
+        enclosure_win: None,
+        repetition_rule: Some(RepetitionRule { n_repetitions: 3, is_loss: false }),
         draw_on_no_plays: false,
         linnaean_capture: false,
     };
 }
+
 pub mod boards {
     pub const COPENHAGEN: &str =
         "3ttttt3/5t5/11/t4T4t/t3TTT3t/tt1TTKTT1tt/t3TTT3t/t4T4t/11/5t5/3ttttt3";
