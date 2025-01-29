@@ -36,6 +36,7 @@ struct Node {
     action_qs: HashMap<Action, f32>,
 }
 
+#[allow(dead_code)]
 impl Node{
     fn new(board: Board,
            valid_actions: Vec<Action>,

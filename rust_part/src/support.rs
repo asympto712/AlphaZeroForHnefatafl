@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![allow(unused_variables)]
 
 use crate::hnefgame::tiles::{Axis, Tile};
 use crate::hnefgame::game::Game;

@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::game::{SmallBasicGame, Game};
@@ -12,6 +14,7 @@ use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
+
 
 fn generate_training_example<T: BoardState>(
     game_state_history: &Vec<GameState<T>>,
