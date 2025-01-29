@@ -1,6 +1,6 @@
-use super::error::ParseError::{BadChar, EmptyString};
-use super::error::ParseError;
-use super::tiles::Axis::{Horizontal, Vertical};
+use crate::hnefgame::error::ParseError::{BadChar, EmptyString};
+use crate::hnefgame::error::ParseError;
+use crate::hnefgame::tiles::Axis::{Horizontal, Vertical};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
 use std::str::FromStr;

@@ -1,15 +1,15 @@
-use super::tiles::{Axis, AxisOffset, Coords, Tile};
+use crate::hnefgame::tiles::{Axis, AxisOffset, Coords, Tile};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use super::board::state::BoardState;
-use super::error::{BoardError, ParseError, PlayError};
-use super::error::ParseError::{BadPlay, BadString};
-use super::error::PlayError::DisjointTiles;
-use super::game::logic::GameLogic;
-use super::game::PlayEffects;
-use super::game::state::GameState;
-use super::pieces::{Piece, Side};
-use super::tiles::Axis::{Horizontal, Vertical};
+use crate::hnefgame::board::state::BoardState;
+use crate::hnefgame::error::{BoardError, ParseError, PlayError};
+use crate::hnefgame::error::ParseError::{BadPlay, BadString};
+use crate::hnefgame::error::PlayError::DisjointTiles;
+use crate::hnefgame::game::logic::GameLogic;
+use crate::hnefgame::game::PlayEffects;
+use crate::hnefgame::game::state::GameState;
+use crate::hnefgame::pieces::{Piece, Side};
+use crate::hnefgame::tiles::Axis::{Horizontal, Vertical};
 
 /// A single move of a piece from one tile to another. (Named "Play" rather than "Move" as the lower-cased version of
 /// the latter would clash with the Rust keyword.)

@@ -1,13 +1,12 @@
 pub mod rules {
-    use super::pieces::PieceSet;
-    use super::pieces::PieceType::{King, Soldier};
-    use super::pieces::Side::Attacker;
-    use super::rules::KingAttack::Armed;
-    use super::rules::{HostilityRules, RepetitionRule, Ruleset, ShieldwallRules};
-    use super::rules::EnclosureWinRules::WithoutEdgeAccess;
-    use super::rules::KingStrength::{Strong, StrongByThrone};
-    use super::rules::ThroneRule::{KingEntry, NoEntry};
-
+    use crate::hnefgame::pieces::PieceSet;
+    use crate::hnefgame::pieces::PieceType::{King, Soldier};
+    use crate::hnefgame::pieces::Side::Attacker;
+    use crate::hnefgame::rules::KingAttack::Armed;
+    use crate::hnefgame::rules::{HostilityRules, RepetitionRule, Ruleset, ShieldwallRules};
+    use crate::hnefgame::rules::EnclosureWinRules::WithoutEdgeAccess;
+    use crate::hnefgame::rules::KingStrength::{Strong, StrongByThrone};
+    use crate::hnefgame::rules::ThroneRule::{KingEntry, NoEntry};
     /// Rules for Copenhagen Hnefatafl.
     pub const COPENHAGEN: Ruleset = Ruleset {
         edge_escape: false,

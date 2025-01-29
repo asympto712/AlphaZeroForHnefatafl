@@ -80,6 +80,8 @@ pub struct Game<T: BoardState> {
     pub state_history: Vec<GameState<T>>
 }
 
+
+
 impl<T: BoardState> Game<T> {
 
     /// Create a new [`Game`] from the given rules and starting positions.

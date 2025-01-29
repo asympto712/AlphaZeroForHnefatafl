@@ -1,6 +1,6 @@
 use std::hash::Hash;
 #[cfg(test)]
-use super::tiles::Tile;
+use crate::tiles::Tile;
 
 /// A stack that each value can only be pushed to once. Once a value has been pushed to the stack,
 /// it cannot be pushed to the stack again, even if it has been popped (pushing again silently
