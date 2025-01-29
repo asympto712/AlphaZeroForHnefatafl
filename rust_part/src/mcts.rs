@@ -8,13 +8,13 @@ use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
-use crate::hnefgame::logic::GameLogic;
+use crate::hnefgame::game::logic::GameLogic;
 use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play, action_to_str};
 
 use std::any::type_name;
 use std::collections::HashMap;
 use rand::prelude::*;
-use tch::{CModule, Tensor, Kind, Device};
+use tch::{CModule, Tensor, Kind, Device, IValue};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -58,13 +58,16 @@ impl Node{
         //     return f64::INFINITY;
         // }
         // To do; add some dirichlet noise
-        return self.action_qs(action) + C_PUCT * self.action_probs(action) * self.visits.sqrt() / (1.0 + self.action_counts(action) as f32);
+        let q = self.action_qs.get(action).unwrap();
+        let count = self.action_counts.get(action).unwrap();
+        let p = self.action_probs.get(action).unwrap();
+        return *q + C_PUCT * *p * self.visits.sqrt() / (1.0 + *count);
     }
 
 }
 
 // Current one.
-fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel: &CModule, game_logic: GameLogic) -> f32 {
+fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel: &CModule, game_logic: &GameLogic) -> f32 {
 
     let current_player = game_state.side_to_play;
 
@@ -115,12 +118,12 @@ fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel
 
     if let Some(q) = node.action_qs.get_mut(action) {
         if let Some(count) = node.action_counts.get(action) {
-            q = (count * q + reward) / (count + 1.0);
+            *q = (*count * *q + reward) / (*count + 1.0);
         }
     }
 
     if let Some(result) = node.action_counts.get_mut(action) {
-        result += 1.0;
+        *result += 1.0;
     }
     node.visits += 1.0;
     return -1.0 * reward
@@ -131,14 +134,14 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
     let (valid_actions, pi, value) = model_predict(game_state, nnmodel, game_logic);
     let num_valid_actions = valid_actions.len();
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
-    let mut action_Qs = HashMap::with_capacity(num_valid_actions);
+    let mut action_qs = HashMap::with_capacity(num_valid_actions);
     let mut action_probs = HashMap::with_capacity(num_valid_actions);
 
     if !valid_actions.is_empty() {
-        for action in valid_actions {
-            action_counts.insert(action, 0.0);
-            action_Qs.insert(action, 0.0);
-            action_probs.insert(action, pi[action.try_into().expect("could not convert action into an integer")]);
+        for action in valid_actions.iter() {
+            action_counts.insert(*action, 0.0);
+            action_qs.insert(*action, 0.0);
+            action_probs.insert(*action, pi[*action as usize]);
         }
     }
 
@@ -170,7 +173,13 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let cond: [bool; 1] = if player == 1 {[true]} else {[false]};
     let cond: Tensor = Tensor::from_slice(&cond);
 
-    let (prob, value): (Tensor, Tensor) = nnmodel.forward_is(&[board, cond]).try_into().unwrap();
+    // Run the inference using the nnmodel
+    let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
+    let output = nnmodel.forward_is(&[input]);
+    let (prob, value) = match output {
+        Ok(IValue::Tuple(output)) => (output[0].to_tensor(), output[1].to_tensor()),
+        _ => panic!("unexpected output from the model"),
+    };
 
     // Converting outputs into vectors
     let prob = prob.flatten(0, i64::try_from(prob.size().len()).unwrap() - 1);
@@ -195,7 +204,8 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
         .map(|(p, v)| p * (*v as f32))
         .collect();
 
-    let sum_probs = pi.iter().sum();
+    let sum_probs: f32 = pi.iter().sum();
+
     if sum_probs > 0.0 {
         for p in &mut pi {
             *p /= sum_probs;
@@ -204,6 +214,7 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
         let num_valid_actions = valid_actions.len();
         pi = valid_actions_for_masking.iter().map(|&v| v as f32 / num_valid_actions as f32).collect();
     }
+
     return (valid_actions, pi, value)
 }
 
@@ -220,24 +231,25 @@ fn get_improved_policy(root: Node) -> Vec<f32> {
 }
 
 // This does a single mcts starting from whomever the current turn is assigned to  
-pub fn mcts<T: BoardState>(nnmodel: CModule, game: Game<T>, iterations: usize) -> Vec<f32> {
+pub fn mcts<T: BoardState>(nnmodel: CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
 
+    let game_logic: GameLogic = game.logic;
 
-    let (valid_actions, pi, value) = model_predict(&game.state, &nnmodel, &game.logic);
+    let (valid_actions, pi, _value) = model_predict(&game.state, &nnmodel, &game_logic);
     let root_board = board_to_matrix(&game.state);
     let num_valid_actions = valid_actions.len();
 
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
-    let mut action_Qs = HashMap::with_capacity(num_valid_actions);
-    let mut action_probs = HashMap::with_capacity(num_value_actions);
+    let mut action_qs = HashMap::with_capacity(num_valid_actions);
+    let mut action_probs = HashMap::with_capacity(num_valid_actions);
 
-    for action in valid_actions {
-        action_counts.insert(action, 0.0);
-        action_Qs.insert(action, 0.0);
-        action_probs.insert(action, pi[action as usize]);
+    for action in valid_actions.iter() {
+        action_counts.insert(*action, 0.0);
+        action_qs.insert(*action, 0.0);
+        action_probs.insert(*action, pi[*action as usize]);
     }
 
-    let root = Node {
+    let mut root = Node {
         board: root_board,
         children: HashMap::with_capacity(num_valid_actions),
         visits: 1.0,
@@ -248,8 +260,8 @@ pub fn mcts<T: BoardState>(nnmodel: CModule, game: Game<T>, iterations: usize) -
     };
 
     for _ in 0..iterations {
-        let game_state_copy = game.state.clone();
-        let _ = search(&mut game_state_copy, &mut root, &nnmodel, &game.logic);
+        let mut game_state_copy = game.state.clone();
+        let _ = search(&mut game_state_copy, &mut root, &nnmodel, &game_logic);
     }
 
     get_improved_policy(root)

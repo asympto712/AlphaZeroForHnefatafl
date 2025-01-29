@@ -6,6 +6,7 @@ use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::{PieceType, Side};
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::board::state::BoardState;
+use crate::game::logic::GameLogic;
 
 use std::fs::{OpenOptions, read_to_string};
 use std::io::{BufWriter, Write};
