@@ -1,14 +1,14 @@
 pub mod logic;
 pub mod state;
 
-use crate::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
-use crate::error::{BoardError, PlayInvalid, ParseError};
-use crate::game::logic::GameLogic;
-use crate::game::state::GameState;
-use crate::pieces::{PlacedPiece, Side};
-use crate::play::{Play, PlayRecord, ValidPlayIterator};
-use crate::rules::Ruleset;
-use crate::tiles::Tile;
+use crate::hnefgame::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
+use crate::hnefgame::error::{BoardError, PlayInvalid, ParseError};
+use crate::hnefgame::game::logic::GameLogic;
+use crate::hnefgame::game::state::GameState;
+use crate::hnefgame::pieces::{PlacedPiece, Side};
+use crate::hnefgame::play::{Play, PlayRecord, ValidPlayIterator};
+use crate::hnefgame::rules::Ruleset;
+use crate::hnefgame::tiles::Tile;
 use std::cmp::PartialEq;
 use std::collections::HashSet;
 

@@ -1,3 +1,8 @@
+// NOTE: this is a legacy lib.rs file from Hnefatafl-rs crate, which we modified to our use and 
+// used as the module 'hnefgame' in our project. We decided to rename it to legacylib and preserve it . 
+// Below is the untouched original lib.rs  (29.01 Keigo) 
+
+
 //! This crate provides functionality for creating software related to the
 //! [tafl](https://en.wikipedia.org/wiki/Tafl_games) family of board games. It includes structs,
 //! enums and traits that encapsulate game data and logic, helpful to build games, AIs, etc. It is

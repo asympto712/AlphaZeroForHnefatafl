@@ -1,3 +1,7 @@
+// IDK what business this thing has in here, it conflicts with game submodule and adds nothing to it.
+// I think it was a legacy of our initial run when we were trying to create the game module on our own.
+// NOTE renamed from: rust_part/src/hnefgame/game.rs to: rust_part/src/hnefgame/gamenotused.rs (29.01 Keigo)
+
 use std::io::Write;
 
 

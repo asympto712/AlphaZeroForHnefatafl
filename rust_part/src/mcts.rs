@@ -10,11 +10,6 @@ use std::collections::HashMap;
 use rand::prelude::*;
 use tch::{CModule, Tensor, Kind, Device};
 
-
-
-
-
-
 type Action = u32;
 type State = Vec<Vec<u32>>;  // Here we assume the state is already converted into matrix representation & flattened 
 
@@ -178,7 +173,7 @@ fn get_improved_policy(root: Node) -> Vec<f32> {
 }
 
 // This does a single mcts starting from whomever the current turn is assigned to  
-fn mcts(nnmodel: CModule, game: Game, iterations: usize) -> Vec<f32> {
+pub fn mcts(nnmodel: CModule, game: Game, iterations: usize) -> Vec<f32> {
     let (valid_actions, action_probs, reward) = model_predict(game, &nnmodel);
     let root_state = game.state.copy();
     let num_valid_actions = valid_actions.sum();

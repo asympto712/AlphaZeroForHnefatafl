@@ -1,5 +1,5 @@
 use std::num::ParseIntError;
-use crate::error::ParseError::BadInt;
+use self::ParseError::BadInt;
 
 /// Errors that may be encountered when parsing a string.
 #[derive(Debug, Eq, PartialEq)]

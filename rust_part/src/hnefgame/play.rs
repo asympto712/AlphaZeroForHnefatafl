@@ -1,15 +1,15 @@
-use crate::tiles::{Axis, AxisOffset, Coords, Tile};
+use super::tiles::{Axis, AxisOffset, Coords, Tile};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::board::state::BoardState;
-use crate::error::{BoardError, ParseError, PlayError};
-use crate::error::ParseError::{BadPlay, BadString};
-use crate::error::PlayError::DisjointTiles;
-use crate::game::logic::GameLogic;
-use crate::game::PlayEffects;
-use crate::game::state::GameState;
-use crate::pieces::{Piece, Side};
-use crate::tiles::Axis::{Horizontal, Vertical};
+use super::board::state::BoardState;
+use super::error::{BoardError, ParseError, PlayError};
+use super::error::ParseError::{BadPlay, BadString};
+use super::error::PlayError::DisjointTiles;
+use super::game::logic::GameLogic;
+use super::game::PlayEffects;
+use super::game::state::GameState;
+use super::pieces::{Piece, Side};
+use super::tiles::Axis::{Horizontal, Vertical};
 
 /// A single move of a piece from one tile to another. (Named "Play" rather than "Move" as the lower-cased version of
 /// the latter would clash with the Rust keyword.)

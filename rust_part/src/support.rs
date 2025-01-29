@@ -1,16 +1,16 @@
 
-use hnefatafl::tiles::Axis;
-use std::str::FromStr;
+use hnefgame::tiles::Axis;
+use hnefgame::game::Game;
+use hnefgame::play::Play;
+use hnefgame::pieces::PieceType;
+use hnefgame::game::state::GameState;
+use hnefgame::board::state::BoardState;
 
-use hnefatafl::game::Game;
-use hnefatafl::play::Play;
-use hnefatafl::pieces::PieceType;
-use hnefatafl::game::state::GameState;
-use hnefatafl::board::state::BoardState;
 use std::fs::{OpenOptions, read_to_string};
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::io::stdin;
+use std::str::FromStr;
 
 
 

@@ -1,6 +1,6 @@
-use crate::error::ParseError::{BadChar, EmptyString};
-use crate::error::ParseError;
-use crate::tiles::Axis::{Horizontal, Vertical};
+use super::error::ParseError::{BadChar, EmptyString};
+use super::error::ParseError;
+use super::tiles::Axis::{Horizontal, Vertical};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
 use std::str::FromStr;

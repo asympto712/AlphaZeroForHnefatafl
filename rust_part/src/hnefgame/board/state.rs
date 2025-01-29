@@ -2,12 +2,12 @@ use primitive_types::{U256, U512};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::str::FromStr;
-use crate::bitfield::BitField;
-use crate::error::ParseError;
-use crate::error::ParseError::BadLineLen;
-use crate::pieces::{Piece, Side};
-use crate::pieces::PieceType::{King, Soldier};
-use crate::tiles::Tile;
+use crate::hnefgame::bitfield::BitField;
+use crate::hnefgame::error::ParseError;
+use crate::hnefgame::error::ParseError::BadLineLen;
+use crate::hnefgame::pieces::{Piece, Side};
+use crate::hnefgame::pieces::PieceType::{King, Soldier};
+use crate::hnefgame::tiles::Tile;
 
 /// Store information on the current board state (ie, pieces).
 pub trait BoardState: Default + Clone + Copy + Display + FromStr + Debug + PartialEq {

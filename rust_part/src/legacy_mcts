@@ -1,3 +1,5 @@
+// Legacy code
+
 use std::collections::HashMap;
 
 use rand::prelude::*;

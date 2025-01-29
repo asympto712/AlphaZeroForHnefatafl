@@ -1,4 +1,4 @@
-use crate::tiles::Tile;
+use super::tiles::Tile;
 use primitive_types::{U256, U512};
 use std::fmt::Debug;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};

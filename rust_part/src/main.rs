@@ -1,13 +1,13 @@
-use hnefatafl::game::{Game, SmallBasicGame};
-use hnefatafl::game::GameOutcome::{Draw, Win};
-use hnefatafl::game::GameStatus::Over;
+mod lib;
+
+use hnefgame::game::{Game, SmallBasicGame};
+use hnefgame::game::GameOutcome::{Draw, Win};
+use hnefgame::game::GameStatus::Over;
 use std::any::type_name;
-
-mod support;
-use crate::support::get_all_possible_moves;
-use crate::support::get_play;
-
-use mcts;
+use support::get_all_possible_moves;
+use support::get_play;
+use mcts::mcts;
+use self_play::self_play;
 
 
 
@@ -15,8 +15,8 @@ use mcts;
 fn main() {
     println!("hnefatafl-rs demo");
     let mut game: SmallBasicGame = Game::new(
-        hnefatafl::preset::rules::KOCH,
-        hnefatafl::preset::boards::BRANDUBH,
+        hnefgame::preset::rules::KOCH,
+        hnefgame::preset::boards::BRANDUBH,
     ).expect("Could not create game.");
 
 

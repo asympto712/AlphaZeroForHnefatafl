@@ -1,11 +1,11 @@
 use std::cmp::PartialEq;
-use crate::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
-use crate::error::ParseError;
-use crate::game::GameStatus;
-use crate::game::GameStatus::Ongoing;
-use crate::pieces::Side;
-use crate::play::{Play, PlayRecord};
-use crate::utils::FixedSizeQueue;
+use crate::hnefgame::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
+use crate::hnefgame::error::ParseError;
+use crate::hnefgame::game::GameStatus;
+use crate::hnefgame::game::GameStatus::Ongoing;
+use crate::hnefgame::pieces::Side;
+use crate::hnefgame::play::{Play, PlayRecord};
+use crate::hnefgame::utils::FixedSizeQueue;
 
 /// A short (fixed-size) record of the relevant information about a play we need to figure out
 /// if it is a repetition of a previous play.
