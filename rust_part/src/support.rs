@@ -1,10 +1,11 @@
+#![allow(unused_imports)]
 
-use hnefgame::tiles::Axis;
-use hnefgame::game::Game;
-use hnefgame::play::Play;
-use hnefgame::pieces::PieceType;
-use hnefgame::game::state::GameState;
-use hnefgame::board::state::BoardState;
+use crate::hnefgame::tiles::{Axis, Tile};
+use crate::hnefgame::game::Game;
+use crate::hnefgame::play::Play;
+use crate::hnefgame::pieces::{PieceType, Side};
+use crate::hnefgame::game::state::GameState;
+use crate::hnefgame::board::state::BoardState;
 
 use std::fs::{OpenOptions, read_to_string};
 use std::io::{BufWriter, Write};
@@ -74,7 +75,7 @@ pub fn board_to_matrix<T: BoardState>(game_state: &GameState<T>) -> Vec<Vec<u8>>
     // Iterate over the board and add piece values
     for row in 0..side_len {
         for col in 0..side_len {
-            let tile = hnefatafl::tiles::Tile::new(row, col);
+            let tile = Tile::new(row, col);
             if let Some(piece) = game_state.board.get_piece(tile) {
                 let value = match piece.piece_type {
                     PieceType::Soldier => 1,
@@ -171,8 +172,8 @@ pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> Vec<i8> {
             };
 
             let valid = match game.state.side_to_play {
-                Side::Attacker => game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Attacker, &game.state),
-                Side::Defender => game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Defender, &game.state),
+                Side::Attacker => game.logic.validate_play_for_side(play, Side::Attacker, &game.state),
+                Side::Defender => game.logic.validate_play_for_side(play, Side::Defender, &game.state),
             };
 
             if valid.is_ok() {
@@ -206,7 +207,7 @@ pub fn get_indices_of_ones(binary_vector: &Vec<i8>) -> Vec<usize> {
 }
 
 
-pub fn action_to_str(action : &Action) -> String {
+pub fn action_to_str(action : &u32) -> String {
     let r = action % 49;
     let q = (action / 49) as f32;
     let start: String = int_to_str(q.floor() as u32);

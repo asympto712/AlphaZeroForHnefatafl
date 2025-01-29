@@ -6,7 +6,7 @@ use crate::hnefgame::game::GameOutcome::{Draw, Win};
 use crate::hnefgame::game::GameStatus::Over;
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::play::Play;
-use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play};
+use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play, action_to_str};
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
 use std::any::type_name;
@@ -15,7 +15,7 @@ use rand::prelude::*;
 use tch::{CModule, Tensor, Kind, Device};
 
 type Action = u32;
-type Board = Vec<Vec<u32>>;  // Here we assume the Board is already converted into matrix representation & flattened 
+type Board = Vec<Vec<u32>>;  // Here we assume the Board is already converted into matrix representation & flattened. Update: nvm
 
 const C_PUCT: f32 = 0.3;
 
@@ -114,7 +114,6 @@ fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel
     return -1 * reward
     
 }
-
 
 fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameState<T>, nnmodel: &CModule) {
     let (valid_actions, pi, value) = model_predict(game_state, nnmodel);
