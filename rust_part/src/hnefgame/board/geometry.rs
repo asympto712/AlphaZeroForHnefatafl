@@ -1,6 +1,7 @@
-use super::state::BoardState;
+use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::error::BoardError;
 use crate::hnefgame::tiles::{Coords, Tile, TileIterator};
+
 
 const NEIGHBOR_OFFSETS: [[i8; 2]; 4] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 

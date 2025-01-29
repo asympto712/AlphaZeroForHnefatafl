@@ -1,9 +1,9 @@
 use std::ops::{BitOr, Shl};
-use super::error::ParseError;
-use super::error::ParseError::BadChar;
-use super::pieces::PieceType::{Commander, Guard, King, Knight, Mercenary, Soldier};
-use super::pieces::Side::{Attacker, Defender};
-use super::tiles::Tile;
+use crate::hnefgame::error::ParseError;
+use crate::hnefgame::error::ParseError::BadChar;
+use crate::hnefgame::pieces::PieceType::{Commander, Guard, King, Knight, Mercenary, Soldier};
+use crate::hnefgame::pieces::Side::{Attacker, Defender};
+use crate::hnefgame::tiles::Tile;
 
 /// A convenience reference to the king piece.
 pub const KING: Piece = Piece { piece_type: King, side: Defender };

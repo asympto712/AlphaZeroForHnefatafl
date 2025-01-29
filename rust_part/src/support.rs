@@ -219,7 +219,7 @@ fn int_to_str(u: u32) -> String {
     let table = ["a","b","c","d","e","f","g"];
     let r = u % 7;
     let q = (u / 7) as f32;
-    let row: String = (q.floor() + 1.0).to_string().unwrap();
+    let row: String = (q.floor() as u32 + 1).to_string();
     let col: &str = table[r as usize];
     row + col
 }

@@ -1,4 +1,4 @@
-use super::pieces::{PieceSet, Side};
+use crate::hnefgame::pieces::{PieceSet, Side};
 use std::cmp::PartialEq;
 
 /// Rules relating to who may occupy/pass through the throne.
