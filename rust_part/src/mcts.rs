@@ -4,7 +4,6 @@ use hnefatafl::game::{Game, SmallBasicGame};
 use hnefatafl::game::GameOutcome::{Draw, Win};
 use hnefatafl::game::GameStatus::Over;
 use std::any::type_name;
-mod support;
 
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -125,7 +124,8 @@ fn expand(parent: &mut Node<Action, State>, action: &Action, game: &Game, nnmode
 fn model_predict(game: &Game, nnmodel: &CModule) -> (Vec<f32>, Vec<f32>, f32) {
 
     // Preparing input Tensors
-    let board = Tensor::from_slice2(&game.state, &[7,7], (Kind::Float32, Device::Cpu)); //Assuming game.state is a 2-dimensional vector
+    // let board = Tensor::from_slice2(&game.state, &[7,7], (Kind::Float32, Device::Cpu)); //Assuming game.state is a 2-dimensional vector
+    let board = Tensor::from_slice2(&game.state);
     let cond: [bool; 1] = if game.player == 1 {[true]} else {[false]};
     let cond: Tensor = Tensor::from_slice(&cond);
 

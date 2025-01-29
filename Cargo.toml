@@ -7,14 +7,10 @@ edition = "2021"
 primitive-types = "0.13.1"
 tch = "0.18.1"
 
-[features]
-demo = []
+[[bin]]
+name = "main"
+path = "./rust_part/src/main.rs"
 
 [lib]
 name = "hnefatafl"
-path = "src/lib.rs"
-
-[[bin]]
-name = "hnefatafl-demo"
-path = "src/main.rs"
-required-features = ["demo"]
+path = "./rust_part/src/lib.rs"

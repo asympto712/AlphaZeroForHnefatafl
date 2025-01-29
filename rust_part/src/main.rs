@@ -1,4 +1,7 @@
-mod lib;
+pub mod self_play;
+pub mod support;
+// pub mod mcts;
+pub mod hnefgame;
 
 use hnefgame::game::{Game, SmallBasicGame};
 use hnefgame::game::GameOutcome::{Draw, Win};
@@ -6,7 +9,7 @@ use hnefgame::game::GameStatus::Over;
 use std::any::type_name;
 use support::get_all_possible_moves;
 use support::get_play;
-use mcts::mcts;
+// use mcts::mcts;
 use self_play::self_play;
 
 
