@@ -1,5 +1,5 @@
 [package]
-name = "hnefatafl"
+name = "azhnefatafl"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,14 +7,10 @@ edition = "2021"
 primitive-types = "0.13.1"
 tch = "0.18.1"
 
-[features]
-demo = []
-
 [lib]
-name = "hnefatafl"
-path = "src/lib.rs"
+name = "main"
+path = "rust_part/src/lib.rs"
 
 [[bin]]
-name = "hnefatafl-demo"
-path = "src/main.rs"
-required-features = ["demo"]
+name = "azhnefatafl"
+path = "rust_part/src/main.rs"
