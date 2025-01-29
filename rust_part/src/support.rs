@@ -14,6 +14,7 @@ use std::str::FromStr;
 
 
 
+
 // takes game as input and returns a string vector of all legal moves
 pub fn get_all_possible_moves<T: BoardState>(game: &Game<T>) -> Vec<String> {
     let mut possible_moves = Vec::new();
@@ -141,8 +142,7 @@ pub fn write_to_file(
 }
 
 
-// creates 2 vectors of binary values for all possible plays for the attacker and defender
-pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> (Vec<i8>, Vec<i8>) {
+pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> Vec<i8> {
     let mut tiles = Vec::new();
     let columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
     let rows = [1, 2, 3, 4, 5, 6, 7];
@@ -153,58 +153,56 @@ pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> (Vec<i8>, Vec<i8>) 
             tiles.push(format!("{}{}", col, row));
         }
     }
-    let mut result_attacker = Vec::new();
-    let mut result_defender = Vec::new();
+    let mut result = Vec::new();
 
     // Iterate over each element of the tiles vector
     for start_tile in &tiles {
-        let mut binary_vector_attacker = Vec::new();
-        let mut binary_vector_defender = Vec::new();
+        let mut binary_vector = Vec::new();
+
         for end_tile in &tiles {
             // Convert the strings to a play
             let play_str = format!("{}-{}", start_tile, end_tile);
             let play = match Play::from_str(&play_str) {
                 Ok(play) => play,
                 Err(_e) => {
-                    binary_vector_attacker.push(0);
-                    binary_vector_defender.push(0);
+                    binary_vector.push(0);
                     continue;
                 }
             };
 
-            // Validate the play for the defender
-            let defender_valid = game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Defender, &game.state );
-            // Validate the play for the attacker
-            let attacker_valid = game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Attacker, &game.state );
+            let valid = match game.state.side_to_play {
+                Side::Attacker => game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Attacker, &game.state),
+                Side::Defender => game.logic.validate_play_for_side(play, hnefatafl::pieces::Side::Defender, &game.state),
+            };
 
-            // Assign values based on validity
-            if defender_valid.is_ok() {
-                binary_vector_defender.push(1);
-            } else if attacker_valid.is_ok() {
-                binary_vector_attacker.push(1);
+            if valid.is_ok() {
+                binary_vector.push(1);
             } else {
-                binary_vector_attacker.push(0);
-                binary_vector_defender.push(0); // Default to 0 if invalid for both sides
+                binary_vector.push(0);
             }
         }
-        result_attacker.push(binary_vector_attacker);
-        result_defender.push(binary_vector_defender);
+        result.push(binary_vector);
     }
 
-    let mut single_vector_attacker  = Vec::new();
-    let mut single_vector_defender  = Vec::new();
+    let mut single_vector  = Vec::new();
 
-    for row in &result_attacker {
+    for row in &result {
         for element in row {
-            single_vector_attacker.push(*element);
+            single_vector.push(*element);
         }
     }
-    for row in &result_defender {
-        for element in row {
-            single_vector_defender.push(*element);
+    return single_vector
+}
+
+
+pub fn get_indices_of_ones(binary_vector: &Vec<i8>) -> Vec<usize> {
+    let mut indices = Vec::new();
+    for (index, &value) in binary_vector.iter().enumerate() {
+        if value == 1 {
+            indices.push(index);
         }
     }
-    return (single_vector_attacker, single_vector_defender);
+    indices
 }
 
 
