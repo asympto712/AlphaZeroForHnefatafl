@@ -3,7 +3,7 @@
 
 use crate::hnefgame::game::{Game, SmallBasicGame};
 use crate::hnefgame::game::GameOutcome::{Draw, Win};
-use crate::hnefgame::game::GameStatus::Over;
+use crate::hnefgame::game::GameStatus::{Ongoing, Over};
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::Side;
@@ -23,6 +23,8 @@ type Board = Vec<Vec<u8>>;  // Here we assume the Board is already converted int
 
 const C_PUCT: f32 = 0.3;
 
+// NOTE: We might not even need board field from Node.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct Node {
     board: Board, 
@@ -96,7 +98,8 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
         return -1.0 * reward;
     }
     
-    let action = node.valid_actions
+    let current_valid_actions = node.valid_actions.clone();
+    let action = current_valid_actions
             .iter()
             .max_by(|a, b| {
                 node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
@@ -106,7 +109,7 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
     let play_string = action_to_str(action);
     let play: Play = get_ai_play(&play_string);
 
-    game_logic.do_play(play,game_state); //check this again
+    let _ = game_logic.do_play(play,game_state); //check this again
         
     if !node.children.contains_key(action) {         
         let reward = expand(node, &action, &game_state, &nnmodel, &game_logic);
@@ -177,7 +180,23 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
     let output = nnmodel.forward_is(&[input]);
     let (prob, value) = match output {
-        Ok(IValue::Tuple(output)) => (output[0].to_tensor(), output[1].to_tensor()),
+        Ok(IValue::Tuple(output)) => {
+            if output.len() != 2 {
+                panic!("Expected tuple of 2 tensors, but got {}", output.len());
+            }
+
+            let out1 = match &output[0] {
+                IValue::Tensor(t) => t.shallow_clone(),
+                _ => panic!("Expected a tensor as the first output"),
+            };
+
+            let out2 = match &output[1] {
+                IValue::Tensor(t) => t.shallow_clone(),
+                _ => panic!("Expected a tensor as the second output"),
+            };
+
+            (out1, out2)
+        },
         _ => panic!("unexpected output from the model"),
     };
 
@@ -231,7 +250,7 @@ fn get_improved_policy(root: Node) -> Vec<f32> {
 }
 
 // This does a single mcts starting from whomever the current turn is assigned to  
-pub fn mcts<T: BoardState>(nnmodel: CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
+pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
 
     let game_logic: GameLogic = game.logic;
 
@@ -260,8 +279,8 @@ pub fn mcts<T: BoardState>(nnmodel: CModule, game: &Game<T>, iterations: usize) 
     };
 
     for _ in 0..iterations {
-        let mut game_state_copy = game.state.clone();
-        let _ = search(&mut game_state_copy, &mut root, &nnmodel, &game_logic);
+        let game_state_copy = game.state.clone();
+        let _ = search(game_state_copy, &mut root, &nnmodel, &game_logic);
     }
 
     get_improved_policy(root)
