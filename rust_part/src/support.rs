@@ -143,7 +143,7 @@ pub fn write_to_file(
 }
 
 
-pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> Vec<i8> {
+pub fn generate_tile_plays<T: BoardState>(logic: &GameLogic, game_state: &GameState<T>) -> Vec<i8> {
     let mut tiles = Vec::new();
     let columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
     let rows = [1, 2, 3, 4, 5, 6, 7];
@@ -171,9 +171,9 @@ pub fn generate_tile_plays<T: BoardState>(game: &Game<T>) -> Vec<i8> {
                 }
             };
 
-            let valid = match game.state.side_to_play {
-                Side::Attacker => game.logic.validate_play_for_side(play, Side::Attacker, &game.state),
-                Side::Defender => game.logic.validate_play_for_side(play, Side::Defender, &game.state),
+            let valid = match game_state.side_to_play {
+                Side::Attacker => logic.validate_play_for_side(play, Side::Attacker, &game_state),
+                Side::Defender => logic.validate_play_for_side(play, Side::Defender, &game_state),
             };
 
             if valid.is_ok() {

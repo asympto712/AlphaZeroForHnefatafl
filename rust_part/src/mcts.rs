@@ -6,46 +6,51 @@ use crate::hnefgame::game::GameOutcome::{Draw, Win};
 use crate::hnefgame::game::GameStatus::Over;
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::play::Play;
-use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play, action_to_str};
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
+use crate::hnefgame::logic::GameLogic;
+use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play, action_to_str};
+
 use std::any::type_name;
 use std::collections::HashMap;
 use rand::prelude::*;
 use tch::{CModule, Tensor, Kind, Device};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 type Action = u32;
-type Board = Vec<Vec<u32>>;  // Here we assume the Board is already converted into matrix representation & flattened. Update: nvm
+type Board = Vec<Vec<u8>>;  // Here we assume the Board is already converted into matrix representation & flattened. Update: nvm
 
 const C_PUCT: f32 = 0.3;
 
 #[derive(Debug, Clone)]
-struct Node<'a> {
+struct Node {
     board: Board, 
-    parent: Option<(&'a Node<'a>, Action)>,
-    children: HashMap<Action, Box<&'a Node<'a>>>, 
+    children: HashMap<Action, Rc<RefCell<Node>>>, 
     visits: f32,
     valid_actions: Vec<Action>, 
     action_probs: HashMap<Action, f32>,
     action_counts: HashMap<Action, f32>, 
-    action_Qs: HashMap<Action, f32>,
+    action_qs: HashMap<Action, f32>,
 }
 
-impl Node<'_>{
+impl Node{
     fn new(board: Board,
-           parent: Option<(&Node, Action)>,
            valid_actions: Vec<Action>,
            visits: f32) -> Self {
         Node {
             board,
-            parent,
             children: HashMap::new(),
             visits,
             valid_actions,
             action_probs: HashMap::new(),
             action_counts: HashMap::new(),
-            action_Qs: HashMap::new(),
+            action_qs: HashMap::new(),
         }
+    }
+
+    fn add_child(&mut self, action: Action, child: Node) {
+        self.children.insert(action, Rc::new(RefCell::new(child)));
     }
 
     fn uct_value(&self, action: &Action) -> f32 {
@@ -53,13 +58,13 @@ impl Node<'_>{
         //     return f64::INFINITY;
         // }
         // To do; add some dirichlet noise
-        return self.action_Qs(action) + C_PUCT * self.action_probs(action) * self.visits.sqrt() / (1 + self.action_counts(action));
+        return self.action_qs(action) + C_PUCT * self.action_probs(action) * self.visits.sqrt() / (1.0 + self.action_counts(action) as f32);
     }
 
 }
 
 // Current one.
-fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel: &CModule) -> f32 {
+fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel: &CModule, game_logic: GameLogic) -> f32 {
 
     let current_player = game_state.side_to_play;
 
@@ -101,22 +106,22 @@ fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel
     game_state.do_play(play); //check this again
         
     if !node.children.contains_key(action) {         
-        let reward = expand(&mut node, &action, &game_state, &nnmodel);
+        let reward = expand(&mut node, &action, &game_state, &nnmodel, game_logic);
         return -1.0 * reward
     }
 
-    let next_node = **node.children.get(action).unwrap();
-    let reward = search(game_state, &mut next_node, &nnmodel);
+    let next_node = node.children.get_mut(action).unwrap();
+    let reward = search(game_state, &mut next_node.borrow_mut(), &nnmodel, game_logic);
 
-    node.actions_Qs(action) = (node.actions_counts(action) * node.actions_Qs(action) + reward) / (node.actions_counts(action) + 1.0);
-    node.actions_counts(action) += 1.0;
+    node.action_qs(action) = (node.action_counts(action) * node.action_qs(action) + reward) / (node.action_counts(action) + 1.0);
+    node.action_counts += 1.0;
     node.visits += 1.0;
-    return -1 * reward
+    return -1.0 * reward
     
 }
 
-fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameState<T>, nnmodel: &CModule) {
-    let (valid_actions, pi, value) = model_predict(game_state, nnmodel);
+fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameState<T>, nnmodel: &CModule, game_logic: &GameLogic) -> f32 {
+    let (valid_actions, pi, value) = model_predict(game_state, nnmodel, game_logic);
     let num_valid_actions = valid_actions.len();
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
     let mut action_Qs = HashMap::with_capacity(num_valid_actions);
@@ -124,28 +129,27 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
 
     if !valid_actions.is_empty() {
         for action in valid_actions {
-            action_counts.insert(*action, 0.0);
-            action_Qs.insert(*action, 0.0);
-            action_probs.insert(*action, pi[action.try_into().expect("could not convert action into an integer")]);
+            action_counts.insert(action, 0.0);
+            action_Qs.insert(action, 0.0);
+            action_probs.insert(action, pi[action.try_into().expect("could not convert action into an integer")]);
         }
     }
 
-    let mut new_node: Node = Node{
-        board: board_to_matrix(&game_state.board), //check ownership
-        parent: (parent, action),
+    let new_node: Node = Node{
+        board: board_to_matrix(&game_state),
         children: HashMap::new(),
         visits: 1.0,
         valid_actions,
         action_probs,
         action_counts,
-        action_Qs,
+        action_qs,
     };
-    parent.children.insert(action, Box::new(&new_node));
 
+    parent.add_child(*action, &new_node);
     return value
 }
 
-fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule) -> (Vec<f32>, Vec<f32>, f32) {
+fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, game_logic: &GameLogic) -> (Vec<u32>, Vec<f32>, f32) {
 
     // Preparing input Tensors
     let matrix_representation = board_to_matrix(game_state);
@@ -159,7 +163,7 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule) ->
     let cond: [bool; 1] = if player == 1 {[true]} else {[false]};
     let cond: Tensor = Tensor::from_slice(&cond);
 
-    let (prob, value): (Tensor, Tensor) = nnmodel.forward_is(&[&[board], &[cond]]).try_into().unwrap();
+    let (prob, value): (Tensor, Tensor) = nnmodel.forward_is(&[board, cond]).try_into().unwrap();
 
     // Converting outputs into vectors
     let prob = prob.flatten(0, i64::try_from(prob.size().len()).unwrap() - 1);
@@ -168,13 +172,12 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule) ->
     let value = f32::try_from(value).expect("Could not convert value tensor to f32");
 
 
-
-
-    let valid_actions_for_masking: Vec<f32> = generate_tile_plays(game_state).try_into().expect("could not convert mask into Vec<f32>"); 
+    let valid_actions_for_masking: Vec<i8> = generate_tile_plays(game_logic, game_state); 
     // This should output a correct valid moves depending on the variable game (-> whose turn it is)  
 
 
-    let valid_actions = get_indices_of_ones(valid_actions_for_masking);
+    let valid_actions = get_indices_of_ones(&valid_actions_for_masking);
+    let valid_actions: Vec<u32> = valid_actions.iter().map(|&x| x.try_into().expect("could not convert action into u32")).collect();
 
     if valid_actions.is_empty() {
         return (valid_actions, Vec::new(), 0.0)
@@ -182,15 +185,17 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule) ->
 
     let mut pi: Vec<f32> = prob.iter()
         .zip(valid_actions_for_masking.iter())
-        .map(|(p, v)| p * v)
+        .map(|(p, v)| p * (*v as f32))
         .collect();
 
-    let sum_probs = pi.sum();
-    if sum_probs > 0 {
-        pi /= sum_probs;                           // renormalize
+    let sum_probs = pi.iter().sum();
+    if sum_probs > 0.0 {
+        for p in &mut pi {
+            *p /= sum_probs;
+        }                           // renormalize
     } else {                                                // Contingency for when all the actions with non-zero probabilities are masked
         let num_valid_actions = valid_actions.len();
-        pi = valid_actions_for_masking / num_valid_actions;
+        pi = valid_actions_for_masking.iter().map(|&v| v as f32 / num_valid_actions as f32).collect();
     }
     return (valid_actions, pi, value)
 }
@@ -198,41 +203,46 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule) ->
 fn get_improved_policy(root: Node) -> Vec<f32> {
     let pi_size = 7_usize.pow(4); //                NOTE: Assuming the board is 7x7 if not, change this
     let mut pi = vec![0.0; pi_size];
-    let count_sum: f32 = root.children.values().map(|child| child.visits).sum();
+    let count_sum: f32 = root.children.values().map(|child| child.borrow().visits).sum();
     for (action, child) in &root.children {
         // let index = action_to_index(action); 
-        let index: usize = action.try_into().unwrap();
-        pi[index] = child.visits / count_sum;
+        let index: usize = *action as usize;
+        pi[index] = child.borrow().visits / count_sum;
     }
     pi
 }
 
 // This does a single mcts starting from whomever the current turn is assigned to  
 pub fn mcts<T: BoardState>(nnmodel: CModule, game: Game<T>, iterations: usize) -> Vec<f32> {
-    let (valid_actions, action_probs, reward) = model_predict(&game.state, &nnmodel);
-    let root_board = board_to_matrix(&game.state.board);
+
+
+    let (valid_actions, pi, value) = model_predict(&game.state, &nnmodel, &game.logic);
+    let root_board = board_to_matrix(&game.state);
     let num_valid_actions = valid_actions.len();
+
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
     let mut action_Qs = HashMap::with_capacity(num_valid_actions);
+    let mut action_probs = HashMap::with_capacity(num_value_actions);
+
     for action in valid_actions {
         action_counts.insert(action, 0.0);
         action_Qs.insert(action, 0.0);
+        action_probs.insert(action, pi[action as usize]);
     }
 
     let root = Node {
         board: root_board,
-        parent: None,
         children: HashMap::with_capacity(num_valid_actions),
-        visits: 1,
+        visits: 1.0,
         valid_actions,
         action_probs,
-        action_Qs,
+        action_qs,
         action_counts,
     };
 
     for _ in 0..iterations {
-        let game_state_copy = game.state.Clone();
-        let _ = search(game_state_copy, &mut root, &nnmodel);
+        let game_state_copy = game.state.clone();
+        let _ = search(&mut game_state_copy, &mut root, &nnmodel, &game.logic);
     }
 
     get_improved_policy(root)
