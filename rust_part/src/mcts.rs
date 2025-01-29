@@ -113,8 +113,15 @@ fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel
     let next_node = node.children.get_mut(action).unwrap();
     let reward = search(game_state, &mut next_node.borrow_mut(), &nnmodel, game_logic);
 
-    node.action_qs(action) = (node.action_counts(action) * node.action_qs(action) + reward) / (node.action_counts(action) + 1.0);
-    node.action_counts += 1.0;
+    if let Some(q) = node.action_qs.get_mut(action) {
+        if let Some(count) = node.action_counts.get(action) {
+            q = (count * q + reward) / (count + 1.0);
+        }
+    }
+
+    if let Some(result) = node.action_counts.get_mut(action) {
+        result += 1.0;
+    }
     node.visits += 1.0;
     return -1.0 * reward
     
@@ -145,7 +152,7 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
         action_qs,
     };
 
-    parent.add_child(*action, &new_node);
+    parent.add_child(*action, new_node);
     return value
 }
 
