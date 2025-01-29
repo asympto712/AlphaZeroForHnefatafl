@@ -87,9 +87,9 @@ pub fn self_play(nnmodel: CModule, no_games: i32) {
                 }
                 Err(e) => {
                     println!("Invalid move ({e:?}). Try again.");
-                    let max_index = policy.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(index, _)| index as u32).expect("Policy vector is empty");
-                    let play = get_ai_play(&action_to_str(&action));
-        
+                    //let max_index = policy.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(index, _)| index as u32).expect("Policy vector is empty");
+                    //let play = get_ai_play(&action_to_str(&action));
+                    continue
                 }
             }
         }

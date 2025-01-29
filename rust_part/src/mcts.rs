@@ -10,7 +10,7 @@ use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::game::logic::GameLogic;
 use crate::support::{action_to_str, board_to_matrix, generate_tile_plays, get_ai_play, get_indices_of_ones, get_play};
-
+use crate::hnefgame::game::GameStatus;
 use std::any::type_name;
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -72,7 +72,7 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
     let current_player = game_state.side_to_play;
 
     match game_state.status {
-        Ongoing => (),
+        GameStatus::Ongoing => (),
         Over(outcome) => match outcome {
             Win(_, side) => {
                 if current_player == side {
@@ -97,12 +97,14 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
     }
     
     let action = node.valid_actions
-            .iter()
-            .max_by(|a, b| {
-                node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
-            })
-            .unwrap();
-    
+    .iter()
+    .max_by(|a, b| {
+        node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
+    })
+    .unwrap();
+
+    let play_string = action_to_str(action);
+    let reward = expand(node, action, &game_state, &nnmodel, &game_logic);
     let play_string = action_to_str(action);
     let play: Play = get_ai_play(&play_string);
 
@@ -231,7 +233,7 @@ fn get_improved_policy(root: Node) -> Vec<f32> {
 }
 
 // This does a single mcts starting from whomever the current turn is assigned to  
-pub fn mcts<T: BoardState>(nnmodel: CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
+pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
 
     let game_logic: GameLogic = game.logic;
 
@@ -260,8 +262,8 @@ pub fn mcts<T: BoardState>(nnmodel: CModule, game: &Game<T>, iterations: usize) 
     };
 
     for _ in 0..iterations {
-        let mut game_state_copy = game.state.clone();
-        let _ = search(&mut game_state_copy, &mut root, &nnmodel, &game_logic);
+        let game_state_copy = game.state.clone();
+        let _ = search(game_state_copy, &mut root, &nnmodel, &game_logic);
     }
 
     get_improved_policy(root)
