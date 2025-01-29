@@ -1,17 +1,17 @@
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::game::{SmallBasicGame, Game};
-use crate::support::{action_to_str, board_to_matrix};
+use crate::support::{action_to_str, board_to_matrix, get_ai_play};
 use crate::hnefgame::game::GameOutcome::{Win, Draw};
 use crate::hnefgame::game::GameStatus::Over;
-use rand::distributions::WeightedIndex;
-use tch::nn;
 use crate::hnefgame::play::Play;
 use rand::prelude::*;
-use rand::thread_rng;
+use rand::rng;
 use crate::mcts::mcts;
 use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
+use rand::distr::weighted::WeightedIndex;
+use tch::CModule;
 
 fn generate_training_example<T: BoardState>(
     game_state_history: &Vec<GameState<T>>,
@@ -37,7 +37,7 @@ fn generate_training_example<T: BoardState>(
 
 
 
-pub fn self_play(nnmode: CModule, no_games: i32) {
+pub fn self_play(nnmodel: CModule, no_games: i32) {
 
     for i in 0..no_games {
 
@@ -56,14 +56,15 @@ pub fn self_play(nnmode: CModule, no_games: i32) {
             let player = game.state.side_to_play;
             println!("Player: {:?}", player);
 
-            let policy = mcts(nnmodel, game.clone(), 100);
+            let policy = mcts(&nnmodel, game.clone(), 100);
             policy_history.push(policy.clone());
 
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let dist = WeightedIndex::new(&policy).expect("Invalid distribution");
-            let play = Play::from_str(&action_to_str(dist.sample(&mut rng)));
+            let action = dist.sample(&mut rng) as u32;
+            let play = get_ai_play(&action_to_str(&action));
 
-            match game.do_play(&play) {
+            match game.do_play(play) {
                 Ok(status) => {
                     if let Over(outcome) = status {
                         match outcome {
@@ -87,7 +88,8 @@ pub fn self_play(nnmode: CModule, no_games: i32) {
                 Err(e) => {
                     println!("Invalid move ({e:?}). Try again.");
                     let max_index = policy.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(index, _)| index as u32).expect("Policy vector is empty");
-                    let play = Play::from_str(&action_to_str(&max_index));
+                    let play = get_ai_play(&action_to_str(&action));
+        
                 }
             }
         }
