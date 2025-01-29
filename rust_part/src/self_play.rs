@@ -56,7 +56,7 @@ pub fn self_play(nnmodel: CModule, no_games: i32) {
             let player = game.state.side_to_play;
             println!("Player: {:?}", player);
 
-            let policy = mcts(&nnmodel, game.clone(), 100);
+            let policy = mcts(&nnmodel, &game, 100);
             policy_history.push(policy.clone());
 
             let mut rng = rng();
