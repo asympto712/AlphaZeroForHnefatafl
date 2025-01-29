@@ -6,8 +6,7 @@ use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::{PieceType, Side};
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::board::state::BoardState;
-use crate::game::logic::GameLogic;
-
+use crate::hnefgame::game::logic::GameLogic;
 use std::fs::{OpenOptions, read_to_string};
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -245,5 +244,13 @@ pub fn get_play() -> Option<Play> {
         } else {
             println!("Error reading input. Try again.");
         }
+    }
+}
+
+
+pub fn get_ai_play(input_str: &str) -> Play {
+    match Play::from_str(input_str) {
+        Ok(play) => play,
+        Err(e) => panic!("Invalid move ({e:?})."),
     }
 }

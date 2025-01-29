@@ -9,7 +9,7 @@ use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::game::logic::GameLogic;
-use crate::support::{board_to_matrix, get_indices_of_ones, generate_tile_plays, get_play, action_to_str};
+use crate::support::{action_to_str, board_to_matrix, generate_tile_plays, get_ai_play, get_indices_of_ones, get_play};
 
 use std::any::type_name;
 use std::collections::HashMap;
@@ -67,7 +67,7 @@ impl Node{
 }
 
 // Current one.
-fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel: &CModule, game_logic: &GameLogic) -> f32 {
+fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CModule, game_logic: &GameLogic) -> f32 {
 
     let current_player = game_state.side_to_play;
 
@@ -104,12 +104,12 @@ fn search<T: BoardState>(game_state: &mut GameState<T>, node: &mut Node, nnmodel
             .unwrap();
     
     let play_string = action_to_str(action);
-    let play: Play = Play::from_str(&play_string);
+    let play: Play = get_ai_play(&play_string);
 
-    game_state.do_play(play); //check this again
+    game_logic.do_play(play,game_state); //check this again
         
     if !node.children.contains_key(action) {         
-        let reward = expand(&mut node, &action, &game_state, &nnmodel, game_logic);
+        let reward = expand(node, &action, &game_state, &nnmodel, &game_logic);
         return -1.0 * reward
     }
 
@@ -150,9 +150,9 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
         children: HashMap::new(),
         visits: 1.0,
         valid_actions,
-        action_probs,
-        action_counts,
-        action_qs,
+        action_probs: HashMap::new(),
+        action_counts: HashMap::new(),
+        action_qs: HashMap::new(),
     };
 
     parent.add_child(*action, new_node);
