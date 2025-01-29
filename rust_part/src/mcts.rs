@@ -3,14 +3,14 @@
 
 use crate::hnefgame::game::{Game, SmallBasicGame};
 use crate::hnefgame::game::GameOutcome::{Draw, Win};
-use crate::hnefgame::game::GameStatus::Over;
+use crate::hnefgame::game::GameStatus::{Ongoing, Over};
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::game::logic::GameLogic;
 use crate::support::{action_to_str, board_to_matrix, generate_tile_plays, get_ai_play, get_indices_of_ones, get_play};
-use crate::hnefgame::game::GameStatus;
+
 use std::any::type_name;
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -23,6 +23,8 @@ type Board = Vec<Vec<u8>>;  // Here we assume the Board is already converted int
 
 const C_PUCT: f32 = 0.3;
 
+// NOTE: We might not even need board field from Node.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct Node {
     board: Board, 
@@ -72,7 +74,7 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
     let current_player = game_state.side_to_play;
 
     match game_state.status {
-        GameStatus::Ongoing => (),
+        Ongoing => (),
         Over(outcome) => match outcome {
             Win(_, side) => {
                 if current_player == side {
@@ -96,19 +98,18 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
         return -1.0 * reward;
     }
     
-    let action = node.valid_actions
-    .iter()
-    .max_by(|a, b| {
-        node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
-    })
-    .unwrap();
-
-    let play_string = action_to_str(action);
-    let reward = expand(node, action, &game_state, &nnmodel, &game_logic);
+    let current_valid_actions = node.valid_actions.clone();
+    let action = current_valid_actions
+            .iter()
+            .max_by(|a, b| {
+                node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
+            })
+            .unwrap();
+    
     let play_string = action_to_str(action);
     let play: Play = get_ai_play(&play_string);
 
-    game_logic.do_play(play,game_state); //check this again
+    let _ = game_logic.do_play(play,game_state); //check this again
         
     if !node.children.contains_key(action) {         
         let reward = expand(node, &action, &game_state, &nnmodel, &game_logic);
@@ -179,7 +180,23 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
     let output = nnmodel.forward_is(&[input]);
     let (prob, value) = match output {
-        Ok(IValue::Tuple(output)) => (output[0].to_tensor(), output[1].to_tensor()),
+        Ok(IValue::Tuple(output)) => {
+            if output.len() != 2 {
+                panic!("Expected tuple of 2 tensors, but got {}", output.len());
+            }
+
+            let out1 = match &output[0] {
+                IValue::Tensor(t) => t.shallow_clone(),
+                _ => panic!("Expected a tensor as the first output"),
+            };
+
+            let out2 = match &output[1] {
+                IValue::Tensor(t) => t.shallow_clone(),
+                _ => panic!("Expected a tensor as the second output"),
+            };
+
+            (out1, out2)
+        },
         _ => panic!("unexpected output from the model"),
     };
 
