@@ -3,5 +3,3 @@ env/
 # Added by cargo
 
 /target
-
-python_part/azh/*.pyd

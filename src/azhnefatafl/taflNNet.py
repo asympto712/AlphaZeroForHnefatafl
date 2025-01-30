@@ -1,13 +1,12 @@
 import sys
-sys.path.append('..')
-from utils import *
-
 import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from typing import Tuple
+
+from .utils import *
 
 # game = {
 #     'boardsize' : 7,

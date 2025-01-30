@@ -20,7 +20,7 @@ use pyo3::prelude::*;
 use tch::CModule;
 
 #[pyfunction]
-pub fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
+fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
 -> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
 
     let nnmodel = CModule::load(nnmodel_path).unwrap();
@@ -44,7 +44,7 @@ pub fn self_play_function<'py> (nnmodel_path: &str, no_games: i32)
 }
 
 #[pymodule]
-pub fn azhnefatafl(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _azhnefatafl(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(self_play_function, m)?)?;
     Ok(())

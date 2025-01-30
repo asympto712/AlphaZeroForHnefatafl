@@ -1,7 +1,16 @@
+import os
+import sys
+import time
+import numpy as np
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from .utils import *
+from .taflNNet import TaflNNet as onnet
+
+# This class is a direct import from Alpha-Zero-General
 class NeuralNet():
     """
     This class specifies the base NeuralNet class. To define your own neural
@@ -52,23 +61,6 @@ class NeuralNet():
         Loads parameters of the neural network from folder/filename
         """
         pass
-
-import os
-import sys
-import time
-
-import numpy as np
-from tqdm import tqdm
-
-sys.path.append('../../')
-from utils import *
-
-from NeuralNet import NeuralNet
-
-import torch
-import torch.optim as optim
-
-from .taflNNet import TaflNNet as onnet
 
 args = dotdict({
     'lr': 0.001,
