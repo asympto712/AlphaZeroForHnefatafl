@@ -15,35 +15,37 @@ pub mod hnefgame {
 }
 
 use pyo3::prelude::*;
-use pyo3::types::{PyFloat, PyList, PyString, PyTuple};
-use numpy::{IntoPyArray, PyArray2};
+// use pyo3::types::{PyFloat, PyList, PyString, PyTuple, PyInt};
+// use numpy::array::{PyArray1, PyArray2};
 use tch::CModule;
 
 #[pyfunction]
-fn self_play_function(nnmodel_path: PyString, no_games: PyInt, py: Py<'_>) 
--> PyResult<PyList<PyTuple<PyArray2<PyInt>, PyList<PyFloat>, PyInt, PyInt>>, PyErr> {
+pub fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
+-> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
 
-    let path: &str = nnmodel_path.extract()?;
-    let nnmodel = CModule::load(path).map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to load model: {}", e)))?;
-    let data = self_play::self_play(nnmodel, 100);
+    let nnmodel = CModule::load(nnmodel_path).unwrap();
+    let data = self_play::self_play(nnmodel, no_games);
 
-    // Convert the vector of tuples into a Python list
-    let py_list = PyList::empty(py);
+    // // Convert the vector of tuples into a Python list
+    // let mut list = Vec::new();
     
-    for (board, pi, player, result) in data {
-        let py_board = PyArray2::from_vec2(py, &board)?;
-        let py_pi = PyArray::from_slice(py, &pi)?;
+    // for (board, pi, player, result) in data {
+    //     let py_board = PyArray2::from_vec2(py, &board).unwrap();
+    //     let py_pi = PyArray1::from_slice(py, &pi);
 
-        // Create a Python tuple (matrix, float_vec, int1, int2)
-        let py_tuple = PyTuple::new(py, &[np_board, np_pi, player.into_py(py), result.into_py(py)]);
+    //     // Create a Python tuple (matrix, float_vec, int1, int2)
+    //     let tuple = (py_board, py_pi, player, result);
+    //     let py_tuple = PyTuple::new(py, tuple).unwrap();
         
-        py_list.append(py_tuple).unwrap();
-    }
-    Ok(py_list.into(PyObject))
+    //     list.push(py_tuple);
+    // }
+    // PyList::new(py, list)
+    Ok(data)
 }
 
 #[pymodule]
-fn alpha_zero_for_hnefatafl(py: Python, m: &PyModule) -> PyResult<()> {
+pub fn azhnefatafl(m: &Bound<'_, PyModule>) -> PyResult<()> {
+
     m.add_function(wrap_pyfunction!(self_play_function, m)?)?;
     Ok(())
 }
