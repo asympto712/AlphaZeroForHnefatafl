@@ -38,16 +38,14 @@ fn generate_training_example<T: BoardState>(
 }
 
 
+pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)> {
 
-
-pub fn self_play(nnmodel: CModule, no_games: i32) {
+    let mut training_data = Vec::new();
 
     for i in 0..no_games {
-
         println!("Game number: {}", i);
     
-
-
+    // Create new game
         let mut game: SmallBasicGame = Game::new(
             rules::KOCH,
             boards::BRANDUBH,
@@ -73,8 +71,8 @@ pub fn self_play(nnmodel: CModule, no_games: i32) {
                         match outcome {
                             Draw(reason) => {
                                 println!("Game over. Draw {reason:?}.");
-                                let training_examples = generate_training_example(&game.state_history, &policy_history, 0);
-                                return;
+                                let mut training_examples = generate_training_example(&game.state_history, &policy_history, 0);
+                                training_data.append(&mut training_examples);
                             }
                             Win(reason, side) => {
                                 let outcome_value = match side {
@@ -82,8 +80,8 @@ pub fn self_play(nnmodel: CModule, no_games: i32) {
                                     Side::Defender => -1,
                                 };
                                 println!("Game over. Winner is {side:?} ({reason:?}).");
-                                let training_examples = generate_training_example(&game.state_history, &policy_history, outcome_value);
-                                return;
+                                let mut training_examples = generate_training_example(&game.state_history, &policy_history, outcome_value);
+                                training_data.append(&mut training_examples);
                             }
                         }
                     }
@@ -97,4 +95,6 @@ pub fn self_play(nnmodel: CModule, no_games: i32) {
             }
         }
     }
+
+    training_data
 }
