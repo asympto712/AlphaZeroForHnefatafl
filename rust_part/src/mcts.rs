@@ -9,11 +9,12 @@ use crate::hnefgame::play::Play;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::game::logic::GameLogic;
-use crate::support::{action_to_str, board_to_matrix, generate_tile_plays, get_ai_play, get_indices_of_ones, get_play};
+use super::support::{action_to_str, board_to_matrix, generate_tile_plays, get_ai_play, get_indices_of_ones, get_play};
 
 use std::any::type_name;
 use std::collections::HashMap;
 use rand::prelude::*;
+use tch::nn::{Module, ModuleT};
 use tch::{CModule, Tensor, Kind, Device, IValue};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -166,7 +167,11 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
 fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, game_logic: &GameLogic) -> (Vec<u32>, Vec<f32>, f32) {
 
     // Preparing input Tensors
-    let matrix_representation = board_to_matrix(game_state);
+    // let matrix_representation = board_to_matrix(game_state);
+    let matrix_representation: Vec<Vec<f32>> = board_to_matrix(game_state)
+    .iter()
+    .map(|row| row.iter().map(|&x| x as f32).collect())
+    .collect();
 
     let player = match game_state.side_to_play {
         Side::Attacker => 1,
@@ -178,8 +183,14 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let cond: Tensor = Tensor::from_slice(&cond);
 
     // Run the inference using the nnmodel
-    let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
-    let output = nnmodel.forward_is(&[input]);
+    // let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
+    // let output = nnmodel.forward_is(&[input]);
+    
+    let output = nnmodel.forward_is(&[IValue::Tensor(board), IValue::Tensor(cond)]);
+
+    // TEMP to find the error
+    println!("{:?}", output);
+    
     let (prob, value) = match output {
         Ok(IValue::Tuple(output)) => {
             if output.len() != 2 {

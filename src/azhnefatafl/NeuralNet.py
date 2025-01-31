@@ -62,14 +62,14 @@ class NeuralNet():
         """
         pass
 
-args = dotdict({
+args = {
     'lr': 0.001,
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
-})
+}
 
 # game = {
 #     'boardsize' : 7,
@@ -78,12 +78,12 @@ args = dotdict({
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
+    def __init__(self, game, args):
         self.nnet = onnet(game, args)
-        self.board_x, self.board_y = game['boardsize']
-        self.action_size = game['actionsize']
+        # self.board_x, self.board_y = game['boardsize']
+        # self.action_size = game['actionsize']
 
-        if args.cuda:
+        if args["cuda"]:
             self.nnet.cuda()
 
     def train(self, examples):
@@ -94,15 +94,15 @@ class NNetWrapper(NeuralNet):
         """
         optimizer = optim.Adam(self.nnet.parameters())
 
-        for epoch in range(args.epochs):
+        for epoch in range(args["epochs"]):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
 
-            batch_count = int(len(examples) / args.batch_size)
+            batch_count = int(len(examples) / args["batch_size"])
 
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
-                sample_ids = np.random.randint(len(examples), size=args.batch_size)
+                sample_ids = np.random.randint(len(examples), size=args["batch_size"])
                 boards, pis, players, vs = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.FloatTensor(np.array(boards).astype(np.float64))
                 target_pis = torch.FloatTensor(np.array(pis))
@@ -110,7 +110,7 @@ class NNetWrapper(NeuralNet):
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
                 # predict
-                if args.cuda:
+                if args["cuda"]:
                     boards, target_pis, players, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), players.contiguous().cuda(), target_vs.contiguous().cuda()
 
                 # compute output
@@ -134,7 +134,7 @@ class NNetWrapper(NeuralNet):
 
         # preparing input
         board = torch.FloatTensor(board.astype(np.float64))
-        if args.cuda: board = board.contiguous().cuda()
+        if args["cuda"]: board = board.contiguous().cuda()
         board = board.view(1, self.board_x, self.board_y)
         self.nnet.eval()
         with torch.no_grad():
@@ -166,6 +166,6 @@ class NNetWrapper(NeuralNet):
         filepath = os.path.join(folder, filename)
         if not os.path.exists(filepath):
             raise ("No model in path {}".format(filepath))
-        map_location = None if args.cuda else 'cpu'
+        map_location = None if args["cuda"] else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nnet.load_state_dict(checkpoint['state_dict'])

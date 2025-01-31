@@ -15,6 +15,10 @@ ndarray = "0.16.1"
 name = "main"
 path = "./rust_part/src/main.rs"
 
+[[bin]]
+name = "test"
+path = "./rust_part/src/test.rs"
+
 [lib]
 name = "azhnefatafl"
 path = "./rust_part/src/lib.rs"

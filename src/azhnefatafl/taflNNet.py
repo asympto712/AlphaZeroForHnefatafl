@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from typing import Tuple
-
+from typing import Dict
 from .utils import *
 
 # game = {
@@ -13,25 +13,39 @@ from .utils import *
 #     'actionsize' : actionsize,
 #     }
 
+# args = {
+#     'lr': 0.001,
+#     'dropout': 0.3,
+#     'epochs': 10,
+#     'batch_size': 64,
+#     'cuda': torch.cuda.is_available(),
+#     'num_channels': 512,
+# }
+
 class TaflNNet(nn.Module):
     def __init__(self, game, args):
         # game params
         self.board_x, self.board_y = game['boardsize']
         self.action_size = game['actionsize']
-        self.args = args
+        self.lr: float = args['lr']
+        self.dropout: float = args['dropout']
+        self.epochs: int = args['epochs']
+        self.batch_size: int = args['batch_size']
+        self.cuda: bool = args['cuda']
+        self.num_channels: int = args['num_channels']
 
         super(TaflNNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, args.num_channels, 3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(args.num_channels, args.num_channels, 3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(args.num_channels, args.num_channels, 3, stride=1)
-        self.conv4 = nn.Conv2d(args.num_channels, args.num_channels, 3, stride=1)
+        self.conv1 = nn.Conv2d(1, self.num_channels, 3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(self.num_channels, self.num_channels, 3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(self.num_channels, self.num_channels, 3, stride=1)
+        self.conv4 = nn.Conv2d(self.num_channels, self.num_channels, 3, stride=1)
 
-        self.bn1 = nn.BatchNorm2d(args.num_channels)
-        self.bn2 = nn.BatchNorm2d(args.num_channels)
-        self.bn3 = nn.BatchNorm2d(args.num_channels)
-        self.bn4 = nn.BatchNorm2d(args.num_channels)
+        self.bn1 = nn.BatchNorm2d(self.num_channels)
+        self.bn2 = nn.BatchNorm2d(self.num_channels)
+        self.bn3 = nn.BatchNorm2d(self.num_channels)
+        self.bn4 = nn.BatchNorm2d(self.num_channels)
 
-        self.fc1 = nn.Linear(args.num_channels*(self.board_x-4)*(self.board_y-4), 1024)
+        self.fc1 = nn.Linear(self.num_channels*(self.board_x-4)*(self.board_y-4), 1024)
         self.fc_bn1 = nn.BatchNorm1d(1024)
 
         self.fc2 = nn.Linear(1024, 512)
@@ -49,10 +63,10 @@ class TaflNNet(nn.Module):
         s = F.relu(self.bn2(self.conv2(s)))                          # batch_size x num_channels x board_x x board_y
         s = F.relu(self.bn3(self.conv3(s)))                          # batch_size x num_channels x (board_x-2) x (board_y-2)
         s = F.relu(self.bn4(self.conv4(s)))                          # batch_size x num_channels x (board_x-4) x (board_y-4)
-        s = s.view(-1, self.args.num_channels*(self.board_x-4)*(self.board_y-4))
+        s = s.view(-1, self.num_channels*(self.board_x-4)*(self.board_y-4))
 
-        s = F.dropout(F.relu(self.fc_bn1(self.fc1(s))), p=self.args.dropout, training=self.training)  # batch_size x 1024
-        s = F.dropout(F.relu(self.fc_bn2(self.fc2(s))), p=self.args.dropout, training=self.training)  # batch_size x 512
+        s = F.dropout(F.relu(self.fc_bn1(self.fc1(s))), p=self.dropout, training=self.training)  # batch_size x 1024
+        s = F.dropout(F.relu(self.fc_bn2(self.fc2(s))), p=self.dropout, training=self.training)  # batch_size x 512
 
         # pre_pi = self.fc3(s) if cond else self.fc4(s) 
         pre_pi = torch.where(cond.view(-1,1), self.fc3(s), self.fc4(s))                                             # batch_size x action_size
