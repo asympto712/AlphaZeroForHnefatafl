@@ -2,7 +2,7 @@ import azhnefatafl as azh
 """
 See README.md for instruction. Your code interpreter might give you a warning. Ignore it.
 """
-from  _azhnefatafl import self_play_function
+# from  _azhnefatafl import self_play_function
 
 import torch
 import torch.nn as nn
@@ -27,5 +27,5 @@ args = {
 model = azh.NNetWrapper(game, args)
 scripted_model = torch.jit.script(model.nnet)
 scripted_model.save("models/example.pt")
-result = self_play_function("models/example.pt", 10)
+result = azh.self_play_function("models/example.pt", 1)
 print(result)

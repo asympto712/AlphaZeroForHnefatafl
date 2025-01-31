@@ -221,8 +221,8 @@ fn int_to_str(u: u32) -> String {
     let r = u % 7;
     let q = (u / 7) as f32;
     let row: String = (q.floor() as u32 + 1).to_string();
-    let col: &str = table[r as usize];
-    row + col
+    let col: String = table[r as usize].to_string();
+    col + &row
 }
 
 pub fn input(prompt: &str) -> std::io::Result<String> {
@@ -253,5 +253,16 @@ pub fn get_ai_play(input_str: &str) -> Play {
     match Play::from_str(input_str) {
         Ok(play) => play,
         Err(e) => panic!("Invalid move ({e:?})."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    
+    fn test_int_to_str() {
+        println!("{}", int_to_str(23));
     }
 }

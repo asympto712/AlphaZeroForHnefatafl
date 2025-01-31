@@ -128,13 +128,15 @@ pub type HugeBasicGame = Game<HugeBasicBoardState>;
 
 #[cfg(test)]
 mod tests {
-    use crate::board::state::SmallBasicBoardState;
-    use crate::game::Game;
-    use crate::play::Play;
-    use crate::preset::{boards, rules};
-    use crate::tiles::Tile;
-    use std::collections::HashSet;
 
+    use crate::hnefgame::board::state::SmallBasicBoardState;
+    use crate::hnefgame::game::Game;
+    use crate::hnefgame::play::Play;
+    use crate::hnefgame::preset::{boards, rules};
+    use crate::hnefgame::tiles::Tile;
+    use std::collections::HashSet;
+    use crate::hnefgame::utils::hashset;
+    
     #[test]
     fn test_iter_plays() {
         let game: Game<SmallBasicBoardState> = Game::new(rules::BRANDUBH, boards::BRANDUBH).unwrap();

@@ -215,11 +215,11 @@ impl Iterator for TileIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::ParseError::{BadChar, BadInt, BadPlay, BadString, EmptyString};
-    use crate::error::PlayError;
-    use crate::play::Play;
-    use crate::tiles::Axis::{Horizontal, Vertical};
-    use crate::tiles::Tile;
+    use crate::hnefgame::error::ParseError::{BadChar, BadInt, BadPlay, BadString, EmptyString};
+    use crate::hnefgame::error::PlayError;
+    use crate::hnefgame::play::Play;
+    use crate::hnefgame::tiles::Axis::{Horizontal, Vertical};
+    use crate::hnefgame::tiles::Tile;
     use std::str::FromStr;
 
     #[test]

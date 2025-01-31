@@ -107,6 +107,9 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
                 node.uct_value(a).partial_cmp(&node.uct_value(b)).unwrap()
             })
             .unwrap();
+
+    // // For testing purpose TEMP.
+    // println!("{}", action);
     
     let play_string = action_to_str(action);
     let play: Play = get_ai_play(&play_string);
@@ -155,9 +158,9 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
         children: HashMap::new(),
         visits: 1.0,
         valid_actions,
-        action_probs: HashMap::new(),
-        action_counts: HashMap::new(),
-        action_qs: HashMap::new(),
+        action_probs,
+        action_counts,
+        action_qs,
     };
 
     parent.add_child(*action, new_node);
@@ -188,8 +191,6 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     
     let output = nnmodel.forward_is(&[IValue::Tensor(board), IValue::Tensor(cond)]);
 
-    // TEMP to find the error
-    println!("{:?}", output);
     
     let (prob, value) = match output {
         Ok(IValue::Tuple(output)) => {

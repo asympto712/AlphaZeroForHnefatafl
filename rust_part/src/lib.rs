@@ -23,7 +23,8 @@ use tch::CModule;
 fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
 -> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
 
-    let nnmodel = CModule::load(nnmodel_path).unwrap();
+    let mut nnmodel = CModule::load(nnmodel_path).unwrap();
+    nnmodel.set_eval();
     let data = self_play::self_play(nnmodel, no_games);
 
     // // Convert the vector of tuples into a Python list
@@ -44,6 +45,7 @@ fn self_play_function<'py> (nnmodel_path: &str, no_games: i32)
 }
 
 #[pymodule]
+#[pyo3(name="_azhnefatafl")]
 fn _azhnefatafl(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(self_play_function, m)?)?;

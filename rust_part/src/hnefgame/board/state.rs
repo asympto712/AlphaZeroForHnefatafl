@@ -343,12 +343,13 @@ pub type HugeBasicBoardState = BitfieldBoardState<U512>;
 mod tests {
     use std::collections::HashSet;
     use std::str::FromStr;
-    use crate::board::state::{BoardState, MediumBasicBoardState, SmallBasicBoardState};
-    use crate::pieces::Piece;
-    use crate::pieces::PieceType::{King, Soldier};
-    use crate::pieces::Side::{Attacker, Defender};
-    use crate::preset::boards;
-    use crate::tiles::Tile;
+    use crate::hnefgame::board::state::{BoardState, MediumBasicBoardState, SmallBasicBoardState};
+    use crate::hnefgame::pieces::Piece;
+    use crate::hnefgame::pieces::PieceType::{King, Soldier};
+    use crate::hnefgame::pieces::Side::{Attacker, Defender};
+    use crate::hnefgame::preset::boards;
+    use crate::hnefgame::tiles::Tile;
+    use crate::hnefgame::utils::hashset;
 
     #[test]
     fn test_from_str() {

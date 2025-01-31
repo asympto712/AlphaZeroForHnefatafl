@@ -274,9 +274,9 @@ impl PieceSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::pieces::{Piece, PieceSet};
-    use crate::pieces::PieceType::{Commander, Guard, King, Knight, Mercenary, Soldier};
-    use crate::pieces::Side::{Attacker, Defender};
+    use crate::hnefgame::pieces::{Piece, PieceSet};
+    use crate::hnefgame::pieces::PieceType::{Commander, Guard, King, Knight, Mercenary, Soldier};
+    use crate::hnefgame::pieces::Side::{Attacker, Defender};
 
     #[test]
     fn test_piece_set() {

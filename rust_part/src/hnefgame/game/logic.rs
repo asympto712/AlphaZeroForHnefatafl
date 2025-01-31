@@ -881,25 +881,26 @@ impl GameLogic {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
-    use crate::error::PlayInvalid::{BlockedByPiece, MoveOntoBlockedTile, MoveThroughBlockedTile, NoPiece, OutOfBounds, TooFar};
-    use crate::game::logic::GameLogic;
-    use crate::game::state::{GameState, MediumBasicGameState, SmallBasicGameState};
-    use crate::game::Game;
-    use crate::game::GameOutcome::Win;
-    use crate::game::GameStatus::{Ongoing, Over};
-    use crate::game::WinReason::{KingCaptured, KingEscaped, Repetition};
-    use crate::pieces::PieceType::{King, Soldier};
-    use crate::pieces::Side::{Attacker, Defender};
-    use crate::pieces::{Piece, PieceSet, PlacedPiece, KING};
-    use crate::play::{Play, ValidPlay};
-    use crate::preset::{boards, rules};
-    use crate::rules::ThroneRule::NoPass;
-    use crate::rules::{HostilityRules, Ruleset, ShieldwallRules};
-    use crate::tiles::Tile;
-    use crate::utils::check_tile_vec;
+    use crate::hnefgame::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
+    use crate::hnefgame::error::PlayInvalid::{BlockedByPiece, MoveOntoBlockedTile, MoveThroughBlockedTile, NoPiece, OutOfBounds, TooFar};
+    use crate::hnefgame::game::logic::GameLogic;
+    use crate::hnefgame::game::state::{GameState, MediumBasicGameState, SmallBasicGameState};
+    use crate::hnefgame::game::Game;
+    use crate::hnefgame::game::GameOutcome::Win;
+    use crate::hnefgame::game::GameStatus::{Ongoing, Over};
+    use crate::hnefgame::game::WinReason::{KingCaptured, KingEscaped, Repetition};
+    use crate::hnefgame::pieces::PieceType::{King, Soldier};
+    use crate::hnefgame::pieces::Side::{Attacker, Defender};
+    use crate::hnefgame::pieces::{Piece, PieceSet, PlacedPiece, KING};
+    use crate::hnefgame::play::{Play, ValidPlay};
+    use crate::hnefgame::preset::{boards, rules};
+    use crate::hnefgame::rules::ThroneRule::NoPass;
+    use crate::hnefgame::rules::{HostilityRules, Ruleset, ShieldwallRules};
+    use crate::hnefgame::tiles::Tile;
+    use crate::hnefgame::utils::check_tile_vec;
     use std::str::FromStr;
-    use crate::error::PlayInvalid;
+    use crate::hnefgame::error::PlayInvalid;
+    use crate::hnefgame::utils::hashset;
 
     const TEST_RULES: Ruleset = Ruleset {
         slow_pieces: PieceSet::from_piece_type(King),

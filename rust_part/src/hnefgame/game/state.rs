@@ -157,9 +157,9 @@ pub type HugeBasicGameState = GameState<HugeBasicBoardState>;
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use crate::game::state::RepetitionTracker;
-    use crate::pieces::Side;
-    use crate::play::Play;
+    use crate::hnefgame::game::state::RepetitionTracker;
+    use crate::hnefgame::pieces::Side;
+    use crate::hnefgame::play::Play;
 
     #[test]
     fn test_repetition_tracker() {

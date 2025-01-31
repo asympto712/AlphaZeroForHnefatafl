@@ -1,6 +1,6 @@
 use std::hash::Hash;
 #[cfg(test)]
-use crate::tiles::Tile;
+use crate::hnefgame::tiles::Tile;
 
 /// A stack that each value can only be pushed to once. Once a value has been pushed to the stack,
 /// it cannot be pushed to the stack again, even if it has been popped (pushing again silently
@@ -109,7 +109,7 @@ pub(crate) fn check_tile_vec(actual: Vec<Tile>, expected: Vec<Tile>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::FixedSizeQueue;
+    use crate::hnefgame::utils::FixedSizeQueue;
 
     #[test]
     fn test_fixed_queue() {
