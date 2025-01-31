@@ -63,7 +63,11 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
             let mut rng = rng();
             let dist = WeightedIndex::new(&policy).expect("Invalid distribution");
             let action = dist.sample(&mut rng) as u32;
-            let play = get_ai_play(&action_to_str(&action));
+            let str_action: &str = &action_to_str(&action);
+            let play = get_ai_play(str_action);
+            
+            // For testing purpose. TEMP
+            println!("{}", str_action);
 
             match game.do_play(play) {
                 Ok(status) => {
@@ -73,6 +77,7 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
                                 println!("Game over. Draw {reason:?}.");
                                 let mut training_examples = generate_training_example(&game.state_history, &policy_history, 0);
                                 training_data.append(&mut training_examples);
+                                break;
                             }
                             Win(reason, side) => {
                                 let outcome_value = match side {
@@ -82,6 +87,7 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
                                 println!("Game over. Winner is {side:?} ({reason:?}).");
                                 let mut training_examples = generate_training_example(&game.state_history, &policy_history, outcome_value);
                                 training_data.append(&mut training_examples);
+                                break;
                             }
                         }
                     }

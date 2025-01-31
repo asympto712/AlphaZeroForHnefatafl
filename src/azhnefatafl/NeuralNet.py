@@ -78,8 +78,8 @@ args = {
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game, args):
-        self.nnet = onnet(game, args)
+    def __init__(self, jit_model):
+        self.nnet = jit_model
         # self.board_x, self.board_y = game['boardsize']
         # self.action_size = game['actionsize']
 
@@ -104,7 +104,8 @@ class NNetWrapper(NeuralNet):
             for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args["batch_size"])
                 boards, pis, players, vs = list(zip(*[examples[i] for i in sample_ids]))
-                boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+                # boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+                boards = torch.FloatTensor(np.array(boards))
                 target_pis = torch.FloatTensor(np.array(pis))
                 players = torch.BoolTensor([True if player == 1 else False for player in players])
                 target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))

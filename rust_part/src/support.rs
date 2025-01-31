@@ -150,8 +150,8 @@ pub fn generate_tile_plays<T: BoardState>(logic: &GameLogic, game_state: &GameSt
     let rows = [1, 2, 3, 4, 5, 6, 7];
 
     // Initialize tiles vector with strings of the form letter_number
-    for &col in &columns {
-        for &row in &rows {
+    for &row in &rows {
+        for &col in &columns {
             tiles.push(format!("{}{}", col, row));
         }
     }
