@@ -47,7 +47,7 @@ fn generate_training_example<T: BoardState>(
 use std::time::Instant;
 
 
-pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)> {
+pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
 
     let mut training_data = Vec::new();
 
@@ -82,7 +82,7 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
             if let Ok(msg) = rx.try_recv() {
                 if msg == "exit" {
                     println!("Exiting game...");
-                    return training_data
+                    return Err("Exit command received".to_string());
                 }
             }
 
@@ -146,5 +146,5 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
     for (board, policy, side, outcome) in &training_data {
         write_to_file(file_path, &board, &policy, *side, *outcome);
     }
-    training_data
+    Ok(training_data)
 }
