@@ -6,61 +6,13 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import pickle
+from collections import deque
+from typing import Literal
 
 from .utils import *
-from .taflNNet import TaflNNet as onnet
-
-# This class is a direct import from Alpha-Zero-General
-class NeuralNet():
-    """
-    This class specifies the base NeuralNet class. To define your own neural
-    network, subclass this class and implement the functions below. The neural
-    network does not consider the current player, and instead only deals with
-    the canonical form of the board.
-
-    See othello/NNet.py for an example implementation.
-    """
-
-    def __init__(self):
-        pass
-
-    def train(self, examples):
-        """
-        This function trains the neural network with examples obtained from
-        self-play.
-
-        Input:
-            examples: a list of training examples, where each example is of form
-                      (board, pi, v). pi is the MCTS informed policy vector for
-                      the given board, and v is its value. The examples has
-                      board in its canonical form.
-        """
-        pass
-
-    def predict(self, board):
-        """
-        Input:
-            board: current board in its canonical form.
-
-        Returns:
-            pi: a policy vector for the current board- a numpy array of length
-                game.getActionSize
-            v: a float in [-1,1] that gives the value of the current board
-        """
-        pass
-
-    def save_checkpoint(self, folder, filename):
-        """
-        Saves the current neural network (with its parameters) in
-        folder/filename
-        """
-        pass
-
-    def load_checkpoint(self, folder, filename):
-        """
-        Loads parameters of the neural network from folder/filename
-        """
-        pass
+from .taflNNet import TaflNNet
+from ._azhnefatafl import self_play_function
 
 args = {
     'lr': 0.001,
@@ -69,22 +21,27 @@ args = {
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
+    'maxlen': 10000,
+    'numIter': 10,
+    'numGamesPerIter': 100,
 }
 
-# game = {
-#     'boardsize' : 7,
-#     'actionsize' : actionsize,
-#     }
+game = {
+    'boardsize' : (7, 7),
+    'actionsize' : 49 * 49,
+    }
 
 
-class NNetWrapper(NeuralNet):
-    def __init__(self, jit_model):
-        self.nnet = jit_model
-        # self.board_x, self.board_y = game['boardsize']
-        # self.action_size = game['actionsize']
-
+class NNetWrapper():
+    def __init__(self, args, game, jit_model=None):
+        if jit_model is not None:
+            self.nnet = jit_model
         if args["cuda"]:
             self.nnet.cuda()
+        self.args = args
+        self.game = game
+        self.latest_checkpoint_path = None
+        self.latest_train_examples_path = None
 
     def train(self, examples):
         """
@@ -103,14 +60,21 @@ class NNetWrapper(NeuralNet):
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args["batch_size"])
-                boards, pis, players, vs = list(zip(*[examples[i] for i in sample_ids]))
-                # boards = torch.FloatTensor(np.array(boards).astype(np.float64))
-                boards = torch.FloatTensor(np.array(boards))
-                target_pis = torch.FloatTensor(np.array(pis))
-                players = torch.BoolTensor([True if player == 1 else False for player in players])
-                target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
-                # predict
+                # If the examples are given as a structured numpy array. That is, if it was loaded from .npz file
+                if isinstance(examples, np.ndarray):
+                    boards = torch.FloatTensor(examples["boards"])
+                    target_pis = torch.FloatTensor(examples["pis"])
+                    players = torch.BoolTensor(examples["players"])
+                    target_vs = torch.FloatTensor(examples["vs"])
+                else:
+                    boards, pis, players, vs = list(zip(*[examples[i] for i in sample_ids]))
+                    # boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+                    boards = torch.FloatTensor(np.array(boards))
+                    target_pis = torch.FloatTensor(np.array(pis))
+                    players = torch.BoolTensor([True if player == 1 else False for player in players])
+                    target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
+
                 if args["cuda"]:
                     boards, target_pis, players, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), players.contiguous().cuda(), target_vs.contiguous().cuda()
 
@@ -126,23 +90,23 @@ class NNetWrapper(NeuralNet):
                 total_loss.backward()
                 optimizer.step()
 
-    def predict(self, board):
-        """
-        board: np array with board
-        """
-        # timing
-        start = time.time()
+    # def predict(self, board):  # remnant from Alpha-Zero-General. We won't be using this.
+    #     """
+    #     board: np array with board
+    #     """
+    #     # timing
+    #     start = time.time()
 
-        # preparing input
-        board = torch.FloatTensor(board.astype(np.float64))
-        if args["cuda"]: board = board.contiguous().cuda()
-        board = board.view(1, self.board_x, self.board_y)
-        self.nnet.eval()
-        with torch.no_grad():
-            pi, v = self.nnet(board)
+    #     # preparing input
+    #     board = torch.FloatTensor(board.astype(np.float64))
+    #     if args["cuda"]: board = board.contiguous().cuda()
+    #     board = board.view(1, self.board_x, self.board_y)
+    #     self.nnet.eval()
+    #     with torch.no_grad():
+    #         pi, v = self.nnet(board)
 
-        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
-        return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
+    #     # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+    #     return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     # output is log_softmax
     def loss_pi(self, targets, outputs):
@@ -151,22 +115,146 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
-    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+
+    def save_checkpoint(self, saveasexample: bool, prefix: Literal['i','c'], folder='models', filename='example.pt'):
+        """
+        this will save jit.scripted model into a filepath dependent on the current time( e.g. chp_0951_01.02.25.pt)
+        & return that filepath as the output.
+        prefix 'i' indicates that the model was initialized. 'c' indicates that it is a successor to another checkpoint
+        """
+        if not saveasexample:
+            cur_time = time.strftime("%H%M_%d.%m.%y")
+            filename = prefix + '_' + cur_time + '.pt'
+
         filepath = os.path.join(folder, filename)
+
         if not os.path.exists(folder):
             print("Checkpoint Directory does not exist! Making directory {}".format(folder))
             os.mkdir(folder)
-        else:
-            print("Checkpoint Directory exists! ")
-        torch.save({
-            'state_dict': self.nnet.state_dict(),
-        }, filepath)
+        
+        self.nnet.save(filepath)
+        print("scripted model saved at: {}".format(filepath))        
+        return filepath
 
-    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
-        filepath = os.path.join(folder, filename)
+    def load_checkpoint(self, filepath): 
         if not os.path.exists(filepath):
             raise ("No model in path {}".format(filepath))
-        map_location = None if args["cuda"] else 'cpu'
-        checkpoint = torch.load(filepath, map_location=map_location)
-        self.nnet.load_state_dict(checkpoint['state_dict'])
+        scripted_model = torch.jit.load(filepath)
+        self.nnet = scripted_model
+        if self.args['cuda']:
+            self.nnet.cuda()
+
+    def generate_train_examples(self, model_path, old_train_examples = None, save = True):
+        if old_train_examples: # Pass a deque object with maxlen specified
+            train_examples = old_train_examples
+        else:
+            train_examples = deque([], maxlen= self.args['maxlen'])
+        
+        t = tqdm(range(self.args['numIter']), desc="generating train examples")
+        for _ in t:
+            t.set_description(f"Iteration: {_ + 1}")
+            # Generate new training examples using self-play
+            new_examples = self_play_function(model_path, self.args['numGamesPerIter'])
+            # add the new_examples to the right side of the deque (if length exceeds the maxlen, it will discard older examples from the left)
+            train_examples.extend(new_examples)
+
+        # if save, save the structured numpy array from the train_examples to train_examples/ folder
+        if save:
+            self.save_train_examples(train_examples)
+        
+        return train_examples
+    
+    def save_train_examples(self, train_examples):
+        cur_time = time.strftime("%H%M_%d.%m.%y")
+        filename = cur_time + '.npz'
+        filepath = os.path.join("train_examples", filename)
+        if not os.path.exists("train_examples"):
+            print("Train examples directory does not exist! Making directory train_examples")
+            os.mkdir("train_examples")
+
+        dtypes = np.dtypes([
+            ("boards",np.uint8, self.game['boardsize'])
+            ,("pis", np.float32, (self.game['actionsize']))
+            ,("players", np.int8)
+            ,("vs", np.float32)
+            ])
+        np_array = np.array(train_examples, dtype = dtypes)
+        np.savez_compressed(filepath, a = np_array) 
+        print("train_examples saved at {}".format(filepath))
+
+    def load_train_examples(self, path, use: Literal["train", "generate"]):
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"No file found at {path}")
+        loaded = np.load(path)
+        
+        if use == "train":
+            return loaded['a']
+        else:
+            return deque((item.item() for item in loaded['a']), maxlen=self.args['maxlen'])
+
+    def learn(self, checkpoint_filepath = None, train_examples_path = None):
+        """
+        About checkpoint_filepath:
+        If checkpoint_filepath is given, use that model and set it as the latest checkpoint.
+        If not, first it checks if self has a latest_checkpoint_path attribute. If it does, use the model indicated by that path.
+        If not, it creates an initialized model and set it as the latest checkpoint.
+
+        About train_examples_path:
+        Similar system as checkpoint_filepath
+        """
+
+        count = 1
+        try:
+            while True:
+
+                print("Starting self-play -> train cycle {}..".format(count))
+                if checkpoint_filepath:
+                    self.latest_checkpoint_path = checkpoint_filepath
+                elif self.latest_checkpoint_path:
+                    print("no checkpoint_filepath argument was given, using model at {}".format(self.latest_checkpoint_path))
+                else:
+                    print("no checkpoint_filepath was given & no information on the latest checkpoint. Creating a new model..")
+                    initial_model = TaflNNet(self.game, self.args)
+                    scripted_initial_model = torch.jit.script(initial_model)
+                    self.nnet = scripted_initial_model
+                    if self.args['cuda']:
+                        self.nnet.cuda()
+                    path = self.save_checkpoint(saveasexample=False, prefix='i')
+                    self.latest_checkpoint_path = path
+                    print("new model was created and saved at {}".format(path))
+
+
+                if train_examples_path:
+                    self.latest_train_examples_path = train_examples_path
+                    old_train_examples = self.load_train_examples(self.latest_train_examples_path, 'generate')
+                elif self.latest_train_examples_path:
+                    print("no train_example_path was given. Using the latest train_example..")
+                    old_train_examples = self.load_train_examples(self.latest_train_examples_path, 'generate')
+                else:
+                    print("no train_exmaple_path was given nor is there any infomation on the latest train_examples. Creating new train examples")
+                    old_train_examples = None
+
+                train_examples = self.generate_train_examples(self.latest_checkpoint_path, old_train_examples, save=True)
+                self.load_checkpoint(self.latest_checkpoint_path)
+                self.train(train_examples)
+                model_path = self.save_checkpoint(saveasexample=False, prefix='c')
+                self.latest_checkpoint_path = model_path
+
+                count += 1
+
+        except KeyboardInterrupt:
+            print("Training interrupted by user. latest checkpoints are.. \nmodel:{} \ntraining_examples:{}"
+                  .format(self.latest_checkpoint_path, self.latest_train_examples_path))
+            
+    def save_itself(self, savennmodelaswell = False):
+        if not savennmodelaswell:
+            self.nnet = None
+        with open("wrapper.pkl", "wb") as f:
+            pickle.dump(self, f)
+            print("wrapper saved! To load, \n"
+                  + "with open(\"wrapper.pkl\", \"rb\") as f:\n"
+                  + "   loaded_wrapper = pickle.load(f)")
+        
+
+
+

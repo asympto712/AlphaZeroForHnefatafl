@@ -192,7 +192,7 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let output = nnmodel.forward_is(&[IValue::Tensor(board), IValue::Tensor(cond)]);
 
     
-    let (prob, value) = match output {
+    let (log_prob, value) = match output {
         Ok(IValue::Tuple(output)) => {
             if output.len() != 2 {
                 panic!("Expected tuple of 2 tensors, but got {}", output.len());
@@ -214,8 +214,8 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     };
 
     // Converting outputs into vectors
-    let prob = prob.flatten(0, i64::try_from(prob.size().len()).unwrap() - 1);
-    let prob = Vec::<f32>::try_from(prob).expect("Something went wrong when converting tensor into vector");
+    let log_prob = pre_prob.flatten(0, i64::try_from(prob.size().len()).unwrap() - 1);
+    let log_prob = Vec::<f32>::try_from(pre_prob).expect("Something went wrong when converting tensor into vector");
     let value = value.flatten(0, i64::try_from(value.size().len()).unwrap() - 1);
     let value = f32::try_from(value).expect("Could not convert value tensor to f32");
 
@@ -231,9 +231,9 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
         return (valid_actions, Vec::new(), 0.0)
     }
 
-    let mut pi: Vec<f32> = prob.iter()
+    let mut pi: Vec<f32> = log_prob.iter()
         .zip(valid_actions_for_masking.iter())
-        .map(|(p, v)| p * (*v as f32))
+        .map(|(p, v)| p.exp() * (*v as f32))  // nnmodel outputs log_softmax, so we need to apply .exp() to recover the original probability
         .collect();
 
     let sum_probs: f32 = pi.iter().sum();

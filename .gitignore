@@ -4,4 +4,10 @@ env/
 
 /target
 
-/models/
+/models/*
+/src/azhnefatafl/__pycache__/*.pyc
+**/*.whl/*
+/models/*.pt
+/training_examples/
+
+
