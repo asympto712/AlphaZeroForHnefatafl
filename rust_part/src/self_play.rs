@@ -3,7 +3,7 @@
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::game::{SmallBasicGame, Game};
-use crate::support::{action_to_str, board_to_matrix, get_ai_play};
+use crate::support::{action_to_str, board_to_matrix, get_ai_play,write_to_file};
 use crate::hnefgame::game::GameOutcome::{Win, Draw};
 use crate::hnefgame::game::GameStatus::Over;
 use crate::hnefgame::play::Play;
@@ -14,6 +14,12 @@ use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
+
+
+use std::io::{self,Write};
+use std::thread;
+use std::sync::mpsc;
+use termion::input::TermRead;
 
 
 fn generate_training_example<T: BoardState>(
@@ -37,10 +43,26 @@ fn generate_training_example<T: BoardState>(
     training_examples
 }
 
+// For testing
+use std::time::Instant;
 
-pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)> {
+
+pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
 
     let mut training_data = Vec::new();
+
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let stdin = io::stdin();
+        for c in stdin.keys() {
+            let c = c.unwrap();
+            if c == termion::event::Key::Char('e') {
+                tx.send("exit").unwrap();
+                break;
+            }
+        }
+    });
 
     for i in 0..no_games {
         println!("Game number: {}", i);
@@ -54,8 +76,21 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
         let mut policy_history = Vec::new();
 
         loop {
+            let move_time = Instant::now();
+
+            // check for exit string
+            if let Ok(msg) = rx.try_recv() {
+                if msg == "exit" {
+                    println!("Exiting game...");
+                    return Err("Exit command received".to_string());
+                }
+            }
+
             let player = game.state.side_to_play;
             println!("Player: {:?}", player);
+
+            println!("Board:");
+            println!("{}", game.state.board);
 
             let policy = mcts(&nnmodel, &game, 100);
             policy_history.push(policy.clone());
@@ -71,6 +106,8 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
 
             match game.do_play(play) {
                 Ok(status) => {
+                    println!("Move took: {:?}", move_time.elapsed());
+
                     if let Over(outcome) = status {
                         match outcome {
                             Draw(reason) => {
@@ -100,7 +137,14 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Vec<(Vec<Vec<u8>>, Vec<f32>
                 }
             }
         }
+
     }
 
-    training_data
+    
+    // // Write serialized data to file
+    // let file_path = "data/training_data.txt";
+    // for (board, policy, side, outcome) in &training_data {
+    //     write_to_file(file_path, &board, &policy, *side, *outcome);
+    // }
+    Ok(training_data)
 }

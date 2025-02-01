@@ -97,11 +97,10 @@ pub fn board_to_matrix<T: BoardState>(game_state: &GameState<T>) -> Vec<Vec<u8>>
 // checks the length of the file and deletes as neccesary
 pub fn write_to_file(
     file_path: &str,
-    matrix: Vec<Vec<u8>>,
-    vector: Vec<u8>,
-    value1: u8,
-    value2: u8,
-    max_entries: usize,
+    matrix: &Vec<Vec<u8>>,
+    vector: &Vec<f32>,
+    value1: i32,
+    value2: i32,
 ) -> std::io::Result<()> {
     let path = Path::new(file_path);
     let mut entries = Vec::new();
@@ -112,19 +111,18 @@ pub fn write_to_file(
         entries = content.lines().map(|line| line.to_string()).collect();
     }
 
-    // Check if the number of entries exceeds max_entries
-    if entries.len() >= max_entries {
-        entries.remove(0); // Remove the oldest entry
-    }
+    // Determine the entry index
+    let entry_index = entries.len();
 
     // Create a new entry
     let new_entry = format!(
-        "{}\n{}\n{}\n{}",
+        "{};{};{};{};{}",
+        entry_index,
         matrix
             .iter()
             .map(|row| row.iter().map(|&v| v.to_string()).collect::<Vec<_>>().join(","))
             .collect::<Vec<_>>()
-            .join("\n"),
+            .join(","),
         vector.iter().map(|&v| v.to_string()).collect::<Vec<_>>().join(","),
         value1,
         value2

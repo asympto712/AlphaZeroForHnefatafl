@@ -1,4 +1,8 @@
 from .NeuralNet import NNetWrapper
+<<<<<<< HEAD
+=======
+from .NeuralNet import NeuralNet
+>>>>>>> f65eafa0d13d4631a28958d417bfaa503e508930
 from .taflNNet import TaflNNet
 from .utils import *
 
