@@ -24,7 +24,13 @@ use tch::CModule;
 fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
 -> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
 
-    let mut nnmodel = CModule::load(nnmodel_path).unwrap();
+    let mut nnmodel = 
+    if tch::Cuda::is_available() {
+        CModule::load_on_device(nnmodel_path, tch::Device::Cuda(0)).unwrap()
+    } else {
+        CModule::load_on_device(nnmodel_path, tch::Device::Cpu).unwrap()
+    };
+    
     nnmodel.set_eval();
     let result = self_play::self_play(nnmodel, no_games);
 

@@ -184,9 +184,10 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     // let input = IValue::Tuple(vec![IValue::Tensor(board), IValue::Tensor(cond)]);
     // let output = nnmodel.forward_is(&[input]);
     
+    let device = if tch::Cuda::is_available() { Device::Cuda(0) } else { Device::Cpu };
+    let board = board.to_device(device);
+    let cond = cond.to_device(device);
     let output = nnmodel.forward_is(&[IValue::Tensor(board), IValue::Tensor(cond)]);
-
-    
     let (log_prob, value) = match output {
         Ok(IValue::Tuple(output)) => {
             if output.len() != 2 {
