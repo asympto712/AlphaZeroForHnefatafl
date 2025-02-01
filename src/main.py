@@ -39,6 +39,7 @@ args = {
 
 wrapper = azh.NNetWrapper(args, game)
 wrapper.learn()
+wrapper.save_itself()
 
 # self-play -> train loop
 #TODO: Implement stop logic

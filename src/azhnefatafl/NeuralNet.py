@@ -36,8 +36,8 @@ class NNetWrapper():
     def __init__(self, args, game, jit_model=None):
         if jit_model is not None:
             self.nnet = jit_model
-        if args["cuda"]:
-            self.nnet.cuda()
+            if args["cuda"]:
+                self.nnet = jit_model.to('cuda')
         self.args = args
         self.game = game
         self.latest_checkpoint_path = None
@@ -142,7 +142,7 @@ class NNetWrapper():
         scripted_model = torch.jit.load(filepath)
         self.nnet = scripted_model
         if self.args['cuda']:
-            self.nnet.cuda()
+            self.nnet = scripted_model.to('cuda')
 
     def generate_train_examples(self, model_path, old_train_examples = None, save = True):
         if old_train_examples: # Pass a deque object with maxlen specified
@@ -221,7 +221,7 @@ class NNetWrapper():
                     scripted_initial_model = torch.jit.script(initial_model)
                     self.nnet = scripted_initial_model
                     if self.args['cuda']:
-                        self.nnet.cuda()
+                        self.nnet = scripted_initial_model.to('cuda')
                     path = self.save_checkpoint(saveasexample=False, prefix='i')
                     self.latest_checkpoint_path = path
                     print("New model was created and saved at {}".format(path))
