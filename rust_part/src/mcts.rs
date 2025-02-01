@@ -28,7 +28,6 @@ const C_PUCT: f32 = 0.3;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct Node {
-    board: Board, 
     children: HashMap<Action, Rc<RefCell<Node>>>, 
     visits: f32,
     valid_actions: Vec<Action>, 
@@ -39,11 +38,9 @@ struct Node {
 
 #[allow(dead_code)]
 impl Node{
-    fn new(board: Board,
-           valid_actions: Vec<Action>,
+    fn new(valid_actions: Vec<Action>,
            visits: f32) -> Self {
         Node {
-            board,
             children: HashMap::new(),
             visits,
             valid_actions,
@@ -154,7 +151,6 @@ fn expand<T: BoardState>(parent: &mut Node, action: &Action, game_state: &GameSt
     }
 
     let new_node: Node = Node{
-        board: board_to_matrix(&game_state),
         children: HashMap::new(),
         visits: 1.0,
         valid_actions,
@@ -268,7 +264,6 @@ pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize)
     let game_logic: GameLogic = game.logic;
 
     let (valid_actions, pi, _value) = model_predict(&game.state, &nnmodel, &game_logic);
-    let root_board = board_to_matrix(&game.state);
     let num_valid_actions = valid_actions.len();
 
     let mut action_counts = HashMap::with_capacity(num_valid_actions);
@@ -282,7 +277,6 @@ pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize)
     }
 
     let mut root = Node {
-        board: root_board,
         children: HashMap::with_capacity(num_valid_actions),
         visits: 1.0,
         valid_actions,
