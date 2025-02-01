@@ -1,0 +1,9 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "src"
+bindings = "pyo3"
+module-name = "azhnefatafl._azhnefatafl"
+

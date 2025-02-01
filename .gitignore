@@ -1,0 +1,7 @@
+env/
+
+# Added by cargo
+
+/target
+/src/azhnefatafl-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl/
+/models/
