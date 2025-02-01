@@ -15,6 +15,7 @@ pub mod hnefgame {
 }
 
 use pyo3::prelude::*;
+use pyo3::exceptions::PyKeyboardInterrupt;
 // use pyo3::types::{PyFloat, PyList, PyString, PyTuple, PyInt};
 // use numpy::array::{PyArray1, PyArray2};
 use tch::CModule;
@@ -25,7 +26,7 @@ fn self_play_function<'py> (nnmodel_path: &str, no_games: i32)
 
     let mut nnmodel = CModule::load(nnmodel_path).unwrap();
     nnmodel.set_eval();
-    let data = self_play::self_play(nnmodel, no_games);
+    let result = self_play::self_play(nnmodel, no_games);
 
     // // Convert the vector of tuples into a Python list
     // let mut list = Vec::new();
@@ -41,7 +42,10 @@ fn self_play_function<'py> (nnmodel_path: &str, no_games: i32)
     //     list.push(py_tuple);
     // }
     // PyList::new(py, list)
-    Ok(data)
+    match result{
+        Ok(data) => return Ok(data),
+        Err(_) => return Err(PyErr::new::<PyKeyboardInterrupt, _>("Game terminated forcefully"))
+    }
 }
 
 #[pymodule]

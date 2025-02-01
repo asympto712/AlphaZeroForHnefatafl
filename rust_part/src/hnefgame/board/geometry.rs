@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::error::BoardError;
 use crate::hnefgame::tiles::{Coords, Tile, TileIterator};

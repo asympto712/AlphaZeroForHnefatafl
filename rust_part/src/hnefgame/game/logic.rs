@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::hnefgame::board::geometry::BoardGeometry;
 use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::error::PlayInvalid::{BlockedByPiece, GameOver, MoveOntoBlockedTile, MoveThroughBlockedTile, NoCommonAxis, NoPiece, OutOfBounds, TooFar, WrongPlayer};

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::hnefgame::tiles::Tile;
 use primitive_types::{U256, U512};
 use std::fmt::Debug;

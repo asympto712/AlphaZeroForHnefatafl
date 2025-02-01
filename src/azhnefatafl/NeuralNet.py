@@ -207,13 +207,16 @@ class NNetWrapper():
         try:
             while True:
 
-                print("Starting self-play -> train cycle {}..".format(count))
+                print("Starting the virtuous train cycle {}!".format(count))
                 if checkpoint_filepath:
                     self.latest_checkpoint_path = checkpoint_filepath
                 elif self.latest_checkpoint_path:
-                    print("no checkpoint_filepath argument was given, using model at {}".format(self.latest_checkpoint_path))
+                    print("No checkpoint_filepath argument was given, using model at {}".format(self.latest_checkpoint_path))
+                    time.sleep(1)
+                    
                 else:
-                    print("no checkpoint_filepath was given & no information on the latest checkpoint. Creating a new model..")
+                    print("No checkpoint_filepath was given & no information on the latest checkpoint. Creating a new model..")
+                    time.sleep(1)
                     initial_model = TaflNNet(self.game, self.args)
                     scripted_initial_model = torch.jit.script(initial_model)
                     self.nnet = scripted_initial_model
@@ -221,17 +224,20 @@ class NNetWrapper():
                         self.nnet.cuda()
                     path = self.save_checkpoint(saveasexample=False, prefix='i')
                     self.latest_checkpoint_path = path
-                    print("new model was created and saved at {}".format(path))
+                    print("New model was created and saved at {}".format(path))
+                    time.sleep(1)
 
 
                 if train_examples_path:
                     self.latest_train_examples_path = train_examples_path
                     old_train_examples = self.load_train_examples(self.latest_train_examples_path, 'generate')
                 elif self.latest_train_examples_path:
-                    print("no train_example_path was given. Using the latest train_example..")
+                    print("No train_example_path was given. Using the latest train_example..")
+                    time.sleep(1)
                     old_train_examples = self.load_train_examples(self.latest_train_examples_path, 'generate')
                 else:
-                    print("no train_exmaple_path was given nor is there any infomation on the latest train_examples. Creating new train examples")
+                    print("No train_exmaple_path was given nor is there any infomation on the latest train_examples. Creating new train examples")
+                    time.sleep(1)
                     old_train_examples = None
 
                 train_examples = self.generate_train_examples(self.latest_checkpoint_path, old_train_examples, save=True)

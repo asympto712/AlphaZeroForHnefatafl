@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod rules {
     use crate::hnefgame::pieces::PieceSet;
     use crate::hnefgame::pieces::PieceType::{King, Soldier};

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::cmp::PartialEq;
 use crate::hnefgame::board::state::{BoardState, HugeBasicBoardState, LargeBasicBoardState, MediumBasicBoardState, SmallBasicBoardState};
 use crate::hnefgame::error::ParseError;

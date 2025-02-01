@@ -20,7 +20,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 type Action = u32;
-type Board = Vec<Vec<u8>>;  // Here we assume the Board is already converted into matrix representation & flattened. Update: nvm
 
 const C_PUCT: f32 = 0.3;
 
@@ -210,8 +209,8 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     };
 
     // Converting outputs into vectors
-    let log_prob = pre_prob.flatten(0, i64::try_from(prob.size().len()).unwrap() - 1);
-    let log_prob = Vec::<f32>::try_from(pre_prob).expect("Something went wrong when converting tensor into vector");
+    let log_prob = log_prob.flatten(0, i64::try_from(log_prob.size().len()).unwrap() - 1);
+    let log_prob = Vec::<f32>::try_from(log_prob).expect("Something went wrong when converting tensor into vector");
     let value = value.flatten(0, i64::try_from(value.size().len()).unwrap() - 1);
     let value = f32::try_from(value).expect("Could not convert value tensor to f32");
 

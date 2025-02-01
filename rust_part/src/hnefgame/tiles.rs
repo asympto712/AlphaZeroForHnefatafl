@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::hnefgame::error::ParseError::{BadChar, EmptyString};
 use crate::hnefgame::error::ParseError;
 use crate::hnefgame::tiles::Axis::{Horizontal, Vertical};

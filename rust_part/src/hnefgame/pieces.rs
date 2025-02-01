@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::ops::{BitOr, Shl};
 use crate::hnefgame::error::ParseError;
 use crate::hnefgame::error::ParseError::BadChar;
