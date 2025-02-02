@@ -158,11 +158,18 @@ class NNetWrapper():
             # add the new_examples to the right side of the deque (if length exceeds the maxlen, it will discard older examples from the left)
             train_examples.extend(new_examples)
 
+        reformatted = []
+        for example in train_examples:
+            np_matrix = np.array([np.frombuffer(row, dtype=np.uint8) for row in example[0]])
+            tmp = (np_matrix,example[1],example[2],example[3])
+            reformatted.append(tmp)    
+
+
         # if save, save the structured numpy array from the train_examples to train_examples/ folder
         if save:
-            self.save_train_examples(train_examples)
+            self.save_train_examples(reformatted)
         
-        return train_examples
+        return reformatted
     
     def save_train_examples(self, train_examples):
         cur_time = time.strftime("%H%M_%d.%m.%y")
@@ -172,14 +179,15 @@ class NNetWrapper():
             print("Train examples directory does not exist! Making directory train_examples")
             os.mkdir("train_examples")
 
-        dtypes = np.dtypes([
-            ("boards",np.uint8, self.game['boardsize'])
-            ,("pis", np.float32, (self.game['actionsize']))
-            ,("players", np.int8)
-            ,("vs", np.float32)
-            ])
-        np_array = np.array(train_examples, dtype = dtypes)
-        np.savez_compressed(filepath, a = np_array) 
+        dtypes = np.dtype([
+            ("boards", np.uint8, self.game['boardsize']),
+            ("pis", np.float32, (self.game['actionsize'])),
+            ("players", np.int8),
+            ("vs", np.float32)
+        ])
+
+        np_array = np.array(train_examples, dtype=dtypes)
+        np.savez_compressed(filepath, a=np_array)
         print("train_examples saved at {}".format(filepath))
 
     def load_train_examples(self, path, use: Literal["train", "generate"]):
