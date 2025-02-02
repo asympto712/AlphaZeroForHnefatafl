@@ -172,7 +172,9 @@ class NNetWrapper():
 
         # if save, save the structured numpy array from the train_examples to train_examples/ folder
         if save:
-            self.save_train_examples(reformatted)
+            filepath = self.save_train_examples(reformatted)
+            self.latest_train_examples_path = filepath
+
         
         return reformatted
     
@@ -194,6 +196,7 @@ class NNetWrapper():
         np_array = np.array(train_examples, dtype=dtypes)
         np.savez_compressed(filepath, a=np_array)
         print("train_examples saved at {}".format(filepath))
+        return filepath
 
     def load_train_examples(self, path, use: Literal["train", "generate"]):
         if not os.path.exists(path):
