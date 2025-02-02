@@ -52,6 +52,8 @@ fn generate_training_example<T: BoardState>(
             // and subtract how many attackers were captured (benefits defender)
 
             reward + 0.2 * (5.0 - no_def) - 0.1 * (8.0 - no_att)
+            // reward
+            // switch lines above for pure win/loss reward
         ));
     }
     training_examples

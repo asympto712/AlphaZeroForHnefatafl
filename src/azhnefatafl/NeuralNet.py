@@ -258,7 +258,7 @@ class NNetWrapper():
 
                 # PRINTING FOR DEBUGGING
                 train_examples = self.generate_train_examples(self.latest_checkpoint_path, old_train_examples, save=True)
-                print("Last 5 examples: \n", train_examples[-5:])
+                # print("Last 5 examples: \n", train_examples[-5:])
 
                 self.load_checkpoint(self.latest_checkpoint_path)
                 self.train(train_examples)
