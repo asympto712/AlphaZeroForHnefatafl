@@ -10,4 +10,6 @@ env/
 /models/*.pt
 /training_examples/
 
+*.pkl
+
 

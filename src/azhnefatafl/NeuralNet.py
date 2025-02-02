@@ -50,16 +50,21 @@ class NNetWrapper():
         v should always be from the perspective of the attacker 
         """
         optimizer = optim.Adam(self.nnet.parameters())
-
-        for epoch in range(args["epochs"]):
+        if not self.nnet:
+            print("this wrapper instance has no attribute nnet. Load an already existing model and try again.")
+            return None
+        elif self.args['cuda']:
+            self.nnet.to('cuda')
+        
+        for epoch in range(self.args["epochs"]):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
 
-            batch_count = int(len(examples) / args["batch_size"])
+            batch_count = int(len(examples) / self.args["batch_size"])
 
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
-                sample_ids = np.random.randint(len(examples), size=args["batch_size"])
+                sample_ids = np.random.randint(len(examples), size=self.args["batch_size"])
 
                 # If the examples are given as a structured numpy array. That is, if it was loaded from .npz file
                 if isinstance(examples, np.ndarray):
@@ -75,7 +80,7 @@ class NNetWrapper():
                     players = torch.BoolTensor([True if player == 1 else False for player in players])
                     target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
-                if args["cuda"]:
+                if self.args["cuda"]:
                     boards, target_pis, players, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), players.contiguous().cuda(), target_vs.contiguous().cuda()
 
                 # compute output
