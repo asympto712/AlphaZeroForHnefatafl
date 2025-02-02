@@ -22,7 +22,7 @@ use tch::CModule;
 
 #[pyfunction]
 fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
--> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
+-> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, f32)>> {
 
     let mut nnmodel = 
     if tch::Cuda::is_available() {

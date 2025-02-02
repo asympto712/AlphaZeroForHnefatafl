@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from collections import deque
+import pickle
 
 game = {
     'boardsize' : (7, 7),
@@ -18,7 +19,7 @@ args = {
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
-    'cuda': False,
+    'cuda': torch.cuda.is_available(),
     'num_channels': 512,
     'maxlen': 10000,
     'numIter': 1,
@@ -37,7 +38,11 @@ args = {
 # model = azh.NNetWrapper(jit_model)
 # model.train(result)
 
+# with open("wrapper.pkl", "rb") as f:
+#     wrapper = pickle.load(f)
+
 wrapper = azh.NNetWrapper(args, game)
+
 wrapper.learn()
 wrapper.save_itself()
 

@@ -80,8 +80,10 @@ pub fn board_to_matrix<T: BoardState>(game_state: &GameState<T>) -> Vec<Vec<u8>>
             let tile = Tile::new(row, col);
             if let Some(piece) = game_state.board.get_piece(tile) {
                 let value = match piece.piece_type {
-                    PieceType::Soldier => 1,
-                    PieceType::Knight => 2,
+                    PieceType::Soldier => match piece.side {
+                        Side::Attacker => 1,
+                        Side::Defender => 2,
+                    },
                     PieceType::King => 5,
                     _ => 0,
                 };

@@ -7,12 +7,12 @@ use crate::hnefgame::game::{SmallBasicGame, Game};
 use crate::support::{action_to_str, board_to_matrix, get_ai_play,write_to_file};
 use crate::hnefgame::game::GameOutcome::{Win, Draw};
 use crate::hnefgame::game::GameStatus::Over;
+use crate::hnefgame::board::state::BoardState;
 use crate::hnefgame::play::Play;
 use rand::prelude::*;
 use rand::rng;
 use crate::mcts::mcts;
 use crate::hnefgame::preset::{boards, rules};
-use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
 
@@ -26,18 +26,32 @@ fn generate_training_example<T: BoardState>(
     game_state_history: &Vec<GameState<T>>,
     policy_history: &Vec<Vec<f32>>,
     final_outcome: i32,
-) -> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)> {
+) -> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, f32)> {
     let mut training_examples = Vec::new();
+    let reward = final_outcome as f32;
+
 
     for (state, policy) in game_state_history.iter().zip(policy_history.iter()) {
+
+        let no_def = BoardState::count_pieces(&state.board, Side::Defender) as f32;
+        let no_att = BoardState::count_pieces(&state.board, Side::Attacker) as f32;
+
+
+
         training_examples.push((
+
             board_to_matrix(state),
             policy.clone(),
+
             match state.side_to_play {
                 Side::Attacker => 1,
                 Side::Defender => -1,
             },
-            final_outcome,
+            // Reward is given as +1 if attacker wins and -1 if defender wins. Attacker is favored when reward is positive.
+            // We take game outcome and add how many defenders were captured (benefits attacker) 
+            // and subtract how many attackers were captured (benefits defender)
+
+            reward + 0.2 * (5.0 - no_def) - 0.1 * (8.0 - no_att)
         ));
     }
     training_examples
@@ -47,7 +61,7 @@ fn generate_training_example<T: BoardState>(
 use std::time::Instant;
 
 
-pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
+pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, f32)>, String> {
 
     let mut training_data = Vec::new();
 

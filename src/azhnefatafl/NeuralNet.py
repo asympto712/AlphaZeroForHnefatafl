@@ -23,7 +23,7 @@ args = {
     'num_channels': 512,
     'maxlen': 10000,
     'numIter': 10,
-    'numGamesPerIter': 100,
+    'numGamesPerIter': 10,
 }
 
 game = {
@@ -256,9 +256,15 @@ class NNetWrapper():
                     time.sleep(1)
                     old_train_examples = None
 
+                # PRINTING FOR DEBUGGING
                 train_examples = self.generate_train_examples(self.latest_checkpoint_path, old_train_examples, save=True)
+                print("Last 5 examples: \n", train_examples[-5:])
+
                 self.load_checkpoint(self.latest_checkpoint_path)
                 self.train(train_examples)
+
+                del train_examples
+
                 model_path = self.save_checkpoint(saveasexample=False, prefix='c')
                 self.latest_checkpoint_path = model_path
 
