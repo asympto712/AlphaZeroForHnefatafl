@@ -11,5 +11,7 @@ env/
 /training_examples/
 
 *.pkl
+**/*.pyd
+**/*.so
 
 
