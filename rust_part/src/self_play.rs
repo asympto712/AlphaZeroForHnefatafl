@@ -16,11 +16,10 @@ use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
 
-
+use std::thread;
+use termion::input::TermRead;
 use std::io::{self,Write};
-use std::sync::mpsc::channel;
-use ctrlc;
-
+use std::sync::mpsc;
 
 
 fn generate_training_example<T: BoardState>(
@@ -52,21 +51,21 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, V
 
     let mut training_data = Vec::new();
 
-    let (tx, rx) = channel();
+    let (tx, rx) = mpsc::channel();
 
-    // thread::spawn(move || {
-    //     let stdin = io::stdin();
-    //     for c in stdin.keys() {
-    //         let c = c.unwrap();
-    //         if c == termion::event::Key::Char('e') {
-    //             tx.send("exit").unwrap();
-    //             break;
-    //         }
-    //     }
-    // });
+    thread::spawn(move || {
+        let stdin = io::stdin();
+        for c in stdin.keys() {
+            let c = c.unwrap();
+            if c == termion::event::Key::Char('e') {
+                tx.send("exit").unwrap();
+                break;
+            }
+        }
+    });
 
-    ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
-    .expect("Error setting Ctrl-C handler");
+    // ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
+    // .expect("Error setting Ctrl-C handler");
 
     for i in 0..no_games {
         println!("Game number: {}", i);
@@ -82,17 +81,14 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, V
         loop {
             let move_time = Instant::now();
 
-            // // check for exit string
-            // if let Ok(msg) = rx.try_recv() {
-            //     if msg == "exit" {
-            //         println!("Exiting game...");
-            //         return Err("Exit command received".to_string());
-            //     }
-            // }
-            if let Ok(_) = rx.try_recv() {
-                println!("Ctrl-C received. Exiting game...");
-                return Err("Ctrl-C received".to_string());
+            // check for exit string
+            if let Ok(msg) = rx.try_recv() {
+                if msg == "exit" {
+                    println!("Exiting game...");
+                    return Err("Exit command received".to_string());
+                }
             }
+
 
             let player = game.state.side_to_play;
             println!("Player: {:?}", player);

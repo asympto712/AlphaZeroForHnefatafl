@@ -260,7 +260,6 @@ fn get_improved_policy(root: Node) -> Vec<f32> {
 
 // This does a single mcts starting from whomever the current turn is assigned to  
 pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize) -> Vec<f32> {
-
     let game_logic: GameLogic = game.logic;
 
     let (valid_actions, pi, _value) = model_predict(&game.state, &nnmodel, &game_logic);
@@ -289,6 +288,7 @@ pub fn mcts<T: BoardState>(nnmodel: &CModule, game: &Game<T>, iterations: usize)
         let game_state_copy = game.state.clone();
         let _ = search(game_state_copy, &mut root, &nnmodel, &game_logic);
     }
+
 
     get_improved_policy(root)
 }
