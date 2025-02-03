@@ -1,4 +1,4 @@
-from .NeuralNet import NNetWrapper
+from .NeuralNet import NNetWrapper, load_wrapper
 from .taflNNet import TaflNNet
 from .utils import *
 

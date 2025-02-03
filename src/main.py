@@ -18,38 +18,26 @@ args = {
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
-    'cuda': False,
+    'cuda': torch.cuda.is_available(),
     'num_channels': 512,
-    'maxlen': 10000,
-    'numIter': 1,
-    'numGamesPerIter': 1,
+    'maxlen': 20000,
+    'numGamesPerGen': 1,
+    'mcts': 100,
 }
 
+# wrapper = azh.NNetWrapper(args, game)
+# wrapper.learn(verbose=False) #your choice
+# wrapper.save_itself()
 
-# model = azh.TaflNNet(game, args)
-# scripted_model = torch.jit.script(model)
-# scripted_model.save("models/example.pt")
-# result = azh.self_play_function("models/example.pt", 1)
+wrapper = azh.load_wrapper("test6")
+wrapper.change_arg("batch_size", 20)
+wrapper.change_arg("numGamesPerGen", 2)
+wrapper.learn(verbose = True)
 
-# print(type(result))
 
-# jit_model = torch.jit.load("models/example.pt")
-# model = azh.NNetWrapper(jit_model)
-# model.train(result)
-
-wrapper = azh.NNetWrapper(args, game)
+"""
+If you want to pick up where you left,
+wrapper = azh.load_wrapper(wrapper_name)
 wrapper.learn()
-wrapper.save_itself()
-
-# self-play -> train loop
-#TODO: Implement stop logic
-# loop {
-#     #self-play
-#     result = azh.self_play_function(model_path, 10)
-#     #train & save
-#     jit_model = torch.jit.load(model_path)
-#     model = azh.NNetWrapper(jit_model)
-#     model.train(result)
-#     new_model_path = model.save_checkpoint()
-#     model_path = new_model_path
-# }
+It automatically loads the latest model and train examples
+"""

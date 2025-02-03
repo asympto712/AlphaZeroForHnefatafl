@@ -21,7 +21,7 @@ use pyo3::exceptions::PyKeyboardInterrupt;
 use tch::CModule;
 
 #[pyfunction]
-fn self_play_function<'py> (nnmodel_path: &str, no_games: i32) 
+fn self_play_function<'py> (nnmodel_path: &str, no_games: i32, mcts_iterations: u32, verbose: bool) 
 -> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
 
     let mut nnmodel = 
@@ -32,7 +32,7 @@ fn self_play_function<'py> (nnmodel_path: &str, no_games: i32)
     };
     
     nnmodel.set_eval();
-    let result = self_play::self_play(nnmodel, no_games);
+    let result = self_play::self_play(nnmodel, no_games, mcts_iterations, verbose);
 
     // // Convert the vector of tuples into a Python list
     // let mut list = Vec::new();

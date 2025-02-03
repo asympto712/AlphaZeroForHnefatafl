@@ -14,4 +14,7 @@ env/
 **/*.pyd
 **/*.so
 
+/agents/*
+/vcycle
+
 

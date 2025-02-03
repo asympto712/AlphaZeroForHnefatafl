@@ -16,10 +16,12 @@ use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
 
+use std::sync::Once;
 use std::thread;
-use termion::input::TermRead;
+// use termion::input::TermRead;
 use std::io::{self,Write};
 use std::sync::mpsc;
+use ctrlc;
 
 
 fn generate_training_example<T: BoardState>(
@@ -46,26 +48,24 @@ fn generate_training_example<T: BoardState>(
 // For testing
 use std::time::Instant;
 
+static INIT: Once = Once::new();
 
-pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
-
+pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose: bool) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
     let mut training_data = Vec::new();
-
     let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || {
-        let stdin = io::stdin();
-        for c in stdin.keys() {
-            let c = c.unwrap();
-            if c == termion::event::Key::Char('e') {
-                tx.send("exit").unwrap();
-                break;
-            }
-        }
+    INIT.call_once(|| {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            ctrlc::set_handler(move || {
+                let _ = tx.send("exit");
+            }).expect("Error setting Ctrl-C handler");
+        });
     });
-
-    // ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
-    // .expect("Error setting Ctrl-C handler");
+    //     ctrlc::set_handler(move || {
+    //         tx.send("exit").expect("Could not send signal on channel.");
+    //     }).expect("Error setting Ctrl-C handler");
+    // });
 
     for i in 0..no_games {
         println!("Game number: {}", i);
@@ -91,10 +91,12 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, V
 
 
             let player = game.state.side_to_play;
-            println!("Player: {:?}", player);
 
-            println!("Board:");
-            println!("{}", game.state.board);
+            if verbose {
+                println!("Player: {:?}", player);
+                println!("Board:");
+                println!("{}", game.state.board);
+            }
 
             let policy = mcts(&nnmodel, &game, 100);
             policy_history.push(policy.clone());
@@ -105,12 +107,16 @@ pub fn self_play(nnmodel: CModule, no_games: i32) -> Result<Vec<(Vec<Vec<u8>>, V
             let str_action: &str = &action_to_str(&action);
             let play = get_ai_play(str_action);
             
-            // For testing purpose. TEMP
-            println!("{}", str_action);
+            if verbose {
+                println!("{}", str_action);
+            }
 
             match game.do_play(play) {
                 Ok(status) => {
-                    println!("Move took: {:?}", move_time.elapsed());
+
+                    if verbose{
+                        println!("Move took: {:?}", move_time.elapsed());
+                    }
 
                     if let Over(outcome) = status {
                         match outcome {
