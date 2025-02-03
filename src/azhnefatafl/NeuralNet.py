@@ -1,4 +1,5 @@
 import os
+import signal
 import sys
 import time
 import numpy as np
@@ -257,99 +258,94 @@ class NNetWrapper():
             return deque((item.item() for item in loaded['a']), maxlen=self.args['maxlen'])
 
     def learn(self, checkpoint_filepath = None, train_examples_path = None, verbose = True):
-        try:
 
-            if checkpoint_filepath:
-                user_input = input("You chose to give an external checkpoint path," 
-                                    + "possibly not related to this wrapper. Are you sure? (y/n)")
-                if user_input.lower() != 'y':
-                    print('aborting...')
-                    sys.exit()
-                        
-                self.checkpoint_paths.append(checkpoint_filepath)
-                self.log_message(f"An external checkpoint filepath {checkpoint_filepath} was specified when calling the learn function")
-            
-            elif not self.checkpoint_paths:
-                print("No external checkpoint path was given. Let's start fresh! Creating a new model..")
-                time.sleep(1)
-                initial_model = TaflNNet(self.game, self.args)
-                scripted_initial_model = torch.jit.script(initial_model)
-                self.nnet = scripted_initial_model
-                if self.args['cuda']:
-                    self.nnet = scripted_initial_model.to('cuda')
-                path = self.save_checkpoint(prefix='i', filename= "gen" + f'{self.gen}' + ".pt")
-                self.checkpoint_paths.append(path)
-                print("New model was created and saved at {}".format(path))
-                time.sleep(1)
+        if checkpoint_filepath:
+            user_input = input("You chose to give an external checkpoint path," 
+                                + "possibly not related to this wrapper. Are you sure? (y/n)")
+            if user_input.lower() != 'y':
+                print('aborting...')
+                sys.exit()
+                    
+            self.checkpoint_paths.append(checkpoint_filepath)
+            self.log_message(f"An external checkpoint filepath {checkpoint_filepath} was specified when calling the learn function")
+        
+        elif not self.checkpoint_paths:
+            print("No external checkpoint path was given. Let's start fresh! Creating a new model..")
+            time.sleep(1)
+            initial_model = TaflNNet(self.game, self.args)
+            scripted_initial_model = torch.jit.script(initial_model)
+            self.nnet = scripted_initial_model
+            if self.args['cuda']:
+                self.nnet = scripted_initial_model.to('cuda')
+            path = self.save_checkpoint(prefix='i', filename= "gen" + f'{self.gen}' + ".pt")
+            self.checkpoint_paths.append(path)
+            print("New model was created and saved at {}".format(path))
+            time.sleep(1)
 
-            if train_examples_path:
-                user_input = input("You chose to give an external train example," 
-                                    + "possibly not related to this wrapper. Are you sure? (y/n)")
-                if user_input.lower() != 'y':
-                    print('aborting...')
-                    sys.exit()
-                        
-                self.train_examples_paths.append(train_examples_path)
-                old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
-                self.log_message(f"An external train examples path {train_examples_path} was specified when calling the learn function")
+        if train_examples_path:
+            user_input = input("You chose to give an external train example," 
+                                + "possibly not related to this wrapper. Are you sure? (y/n)")
+            if user_input.lower() != 'y':
+                print('aborting...')
+                sys.exit()
+                    
+            self.train_examples_paths.append(train_examples_path)
+            old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
+            self.log_message(f"An external train examples path {train_examples_path} was specified when calling the learn function")
 
-            elif not self.train_examples_paths:
-                print("No external train example was given and we are starting fresh!")
-                time.sleep(1)
-                old_train_examples = deque([], maxlen = self.args['maxlen'])
-                path = self.save_train_examples(old_train_examples)
-                self.train_examples_paths.append(path)
+        elif not self.train_examples_paths:
+            print("No external train example was given and we are starting fresh!")
+            time.sleep(1)
+            old_train_examples = deque([], maxlen = self.args['maxlen'])
+            path = self.save_train_examples(old_train_examples)
+            self.train_examples_paths.append(path)
 
-            start_time = time.time()
-
-            summary_writer = SummaryWriter("vcycle")
-            loss_record_path = os.path.join('agents', f'{self.name}', "loss_record.csv")
-            f = open(loss_record_path, "a", newline="")
-            loss_writer = csv.writer(f)
-            loss_writer.writerow(['gen', 'epoch', 'l_pi', 'l_v'])
-
-            while True:
-
-                print("Starting the virtuous train cycle! generation: {}".format(self.gen))
-
-                print("Using model at {}".format(self.checkpoint_paths[-1]))
-
-                print("Using the latest train_example at {}".format(self.train_examples_paths[-1]))
-                time.sleep(1)
-                old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
-                
-                train_examples = self.generate_train_examples(self.checkpoint_paths[-1], old_train_examples, verbose)
-                path = self.save_train_examples(train_examples, filename = 'gen' + f'{self.gen}' + '.npz')
-                self.train_examples_paths.append(path)
-                self.log_message("newer train examples were made using gen {}".format(self.gen))
-                self.load_checkpoint(self.checkpoint_paths[-1])
-
-                #Train the model
-                self.train(train_examples, summary_writer, loss_writer)
-                f.flush()
-                self.log_message("gen {} was trained. Entering gen {}..".format(self.gen, self.gen + 1))
-                self.gen += 1
-                #free up the space
-                del train_examples
-                path = self.save_checkpoint('c', filename= 'gen' + f'{self.gen}' + '.pt')
-                self.checkpoint_paths.append(path)
-
-
-        except KeyboardInterrupt:
+        def handle_ctrl_c(signal, frame):
+            print("\nCtrl+C detected. Shutting down the cycle and saving the checkpoint..")
             f.close()
-            print("Training interrupted by user. latest checkpoints are.. \nmodel:{} \ntraining_examples:{}"
+            time.sleep(1)
+            print("Latest checkpoints are.. \nmodel:{} \ntraining_examples:{}"
                   .format(self.checkpoint_paths[-1], self.train_examples_paths[-1]))
             time_elapsed = time.time() - start_time
             time_elapsed_minutes = time_elapsed / 60
             self.log_message(f"Time elapsed: {time_elapsed_minutes:.2f} minutes")
+            self.save_itself()
+            sys.exit()
         
-        except Exception as e:
-            f.close()
-            print(f"An error occurred: {e}")
-            self.log_message(f"An error occurred: {e}")
-            time_elapsed = time.time() - start_time
-            time_elapsed_minutes = time_elapsed / 60
-            self.log_message(f"Time elapsed: {time_elapsed_minutes:.2f} minutes")
+        start_time = time.time()
+        signal.signal(signal.SIGINT, handle_ctrl_c)
+
+        summary_writer = SummaryWriter("vcycle")
+        loss_record_path = os.path.join('agents', f'{self.name}', "loss_record.csv")
+        f = open(loss_record_path, "a", newline="")
+        loss_writer = csv.writer(f)
+        loss_writer.writerow(['gen', 'epoch', 'l_pi', 'l_v'])
+
+        while True:
+
+            print("Starting the virtuous train cycle! generation: {}".format(self.gen))
+
+            print("Using model at {}".format(self.checkpoint_paths[-1]))
+
+            print("Using the latest train_example at {}".format(self.train_examples_paths[-1]))
+            time.sleep(1)
+            old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
+            
+            train_examples = self.generate_train_examples(self.checkpoint_paths[-1], old_train_examples, verbose)
+            path = self.save_train_examples(train_examples, filename = 'gen' + f'{self.gen}' + '.npz')
+            self.train_examples_paths.append(path)
+            self.log_message("newer train examples were made using gen {}".format(self.gen))
+            self.load_checkpoint(self.checkpoint_paths[-1])
+
+            #Train the model
+            self.train(train_examples, summary_writer, loss_writer)
+            f.flush()
+            self.log_message("gen {} was trained. Entering gen {}..".format(self.gen, self.gen + 1))
+            self.gen += 1
+            #free up the space
+            del train_examples
+            path = self.save_checkpoint('c', filename= 'gen' + f'{self.gen}' + '.pt')
+            self.checkpoint_paths.append(path)
 
             
     def save_itself(self, savennmodelaswell = False):

@@ -15,13 +15,7 @@ use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
-
-use std::sync::Once;
-use std::thread;
-// use termion::input::TermRead;
-use std::io::{self,Write};
-use std::sync::mpsc;
-use ctrlc;
+use std::time::Instant;
 
 
 fn generate_training_example<T: BoardState>(
@@ -45,27 +39,10 @@ fn generate_training_example<T: BoardState>(
     training_examples
 }
 
-// For testing
-use std::time::Instant;
+pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose: bool) 
+-> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>{
 
-static INIT: Once = Once::new();
-
-pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose: bool) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String> {
     let mut training_data = Vec::new();
-    let (tx, rx) = mpsc::channel();
-
-    INIT.call_once(|| {
-        let tx = tx.clone();
-        thread::spawn(move || {
-            ctrlc::set_handler(move || {
-                let _ = tx.send("exit");
-            }).expect("Error setting Ctrl-C handler");
-        });
-    });
-    //     ctrlc::set_handler(move || {
-    //         tx.send("exit").expect("Could not send signal on channel.");
-    //     }).expect("Error setting Ctrl-C handler");
-    // });
 
     for i in 0..no_games {
         println!("Game number: {}", i);
@@ -80,16 +57,6 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
 
         loop {
             let move_time = Instant::now();
-
-            // check for exit string
-            if let Ok(msg) = rx.try_recv() {
-                if msg == "exit" {
-                    println!("Exiting game...");
-                    return Err("Exit command received".to_string());
-                }
-            }
-
-
             let player = game.state.side_to_play;
 
             if verbose {
@@ -149,12 +116,5 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
         }
 
     }
-
-    
-    // // Write serialized data to file
-    // let file_path = "data/training_data.txt";
-    // for (board, policy, side, outcome) in &training_data {
-    //     write_to_file(file_path, &board, &policy, *side, *outcome);
-    // }
-    Ok(training_data)
+    training_data
 }
