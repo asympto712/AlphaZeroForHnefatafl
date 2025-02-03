@@ -8,34 +8,20 @@ import torch.nn.functional as F
 import torch.optim as optim
 from collections import deque
 
-game = {
-    'boardsize' : (7, 7),
-    'actionsize' : 49 * 49,
-}
-
-args = {
-    'lr': 0.001,
-    'dropout': 0.3,
-    'epochs': 10,
-    'batch_size': 64,
-    'cuda': torch.cuda.is_available(),
-    'num_channels': 512,
-    'maxlen': 20000,
-    'numGamesPerGen': 1,
-    'mcts': 100,
-}
+game = azh.Game
+args = azh.Args
 
 """
 To create a new wrapper instance and train it from scratch..
 wrapper = azh.NNetWrapper(args, game)
-wrapper.learn(verbose=False) <- your choice. True will display the moves, boards,.. False will not
+wrapper.learn(verbose=False, maxgen=None) <- your choice. True will display the moves, boards,.. False will not
 
 """
 
 """
 To load a wrapper and start training where you left it..
 wrapper = azh.load_wrapper(WrapperName)
-wrapper.learn(verbose=False) <- your choice.
+wrapper.learn(verbose=False, maxgen=None) <- your choice.
 """
 
 """

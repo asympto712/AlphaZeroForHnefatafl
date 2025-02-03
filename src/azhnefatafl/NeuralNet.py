@@ -257,7 +257,7 @@ class NNetWrapper():
         else:
             return deque((item.item() for item in loaded['a']), maxlen=self.args['maxlen'])
 
-    def learn(self, checkpoint_filepath = None, train_examples_path = None, verbose = True):
+    def learn(self, checkpoint_filepath = None, train_examples_path = None, verbose = True, maxgen = None):
 
         if checkpoint_filepath:
             user_input = input("You chose to give an external checkpoint path," 
@@ -347,6 +347,18 @@ class NNetWrapper():
                 del train_examples
                 path = self.save_checkpoint('c', filename= 'gen' + f'{self.gen}' + '.pt')
                 self.checkpoint_paths.append(path)
+
+                if maxgen and self.gen > maxgen:
+                    print("\n Generation count reached the user-specified limit. Saving the checkpoint..")
+                    f.close()
+                    time.sleep(1)
+                    print("Latest checkpoints are.. \nmodel:{} \ntraining_examples:{}"
+                        .format(self.checkpoint_paths[-1], self.train_examples_paths[-1]))
+                    time_elapsed = time.time() - start_time
+                    time_elapsed_minutes = time_elapsed / 60
+                    self.log_message(f"Time elapsed: {time_elapsed_minutes:.2f} minutes")
+                    self.save_itself()
+                    sys.exit()
         
         except KeyboardInterrupt:
             handle_user_exit()

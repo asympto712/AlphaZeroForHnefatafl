@@ -1,6 +1,7 @@
 from .NeuralNet import NNetWrapper, load_wrapper
 from .taflNNet import TaflNNet
 from .utils import *
+from .config import Game, Args
 
 # whatever code interpreter you are using might give a warning, but shouldn't matter.
 # self note: I'm not sure why, but calling
