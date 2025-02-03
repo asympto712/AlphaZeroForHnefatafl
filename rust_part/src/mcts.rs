@@ -215,6 +215,14 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
     let value = value.flatten(0, i64::try_from(value.size().len()).unwrap() - 1);
     let value = f32::try_from(value).expect("Could not convert value tensor to f32");
 
+    // NOTE: The NN model is trained to always predict the value from the Attacker's perspective. 
+    // Therefore, in MCTS, we need to adjust the value to the current player's perspective.
+
+    let value = match player {
+        1 => value,
+        -1 => -value,
+        _ => panic!("Invalid player value"),
+    };
 
     let valid_actions_for_masking: Vec<i8> = generate_tile_plays(game_logic, game_state); 
     // This should output a correct valid moves depending on the variable game (-> whose turn it is)  
