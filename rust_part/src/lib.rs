@@ -15,6 +15,7 @@ pub mod hnefgame {
 }
 
 use pyo3::prelude::*;
+use pyo3::exceptions::PyKeyboardInterrupt;
 use tch::CModule;
 
 #[pyfunction]
@@ -29,8 +30,12 @@ fn self_play_function<'py> (nnmodel_path: &str, no_games: i32, mcts_iterations: 
     };
     
     nnmodel.set_eval();
-    let data = self_play::self_play(nnmodel, no_games, mcts_iterations, verbose);
-    Ok(data)
+    let result = self_play::self_play(nnmodel, no_games, mcts_iterations, verbose);
+    match result {
+        Ok(training_data) => Ok(training_data),
+        Err(e) => Err(PyErr::new::<PyKeyboardInterrupt, _>(e)),
+    }
+
 }
 
 #[pymodule]

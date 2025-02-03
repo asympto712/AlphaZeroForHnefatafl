@@ -300,8 +300,8 @@ class NNetWrapper():
             path = self.save_train_examples(old_train_examples)
             self.train_examples_paths.append(path)
 
-        def handle_ctrl_c(signal, frame):
-            print("\nCtrl+C detected. Shutting down the cycle and saving the checkpoint..")
+        def handle_user_exit():
+            print("\nManual exit detected. Shutting down the cycle and saving the checkpoint..")
             f.close()
             time.sleep(1)
             print("Latest checkpoints are.. \nmodel:{} \ntraining_examples:{}"
@@ -313,7 +313,7 @@ class NNetWrapper():
             sys.exit()
         
         start_time = time.time()
-        signal.signal(signal.SIGINT, handle_ctrl_c)
+        # signal.signal(signal.SIGINT, handle_ctrl_c)
 
         summary_writer = SummaryWriter("vcycle")
         loss_record_path = os.path.join('agents', f'{self.name}', "loss_record.csv")
@@ -321,31 +321,36 @@ class NNetWrapper():
         loss_writer = csv.writer(f)
         loss_writer.writerow(['gen', 'epoch', 'l_pi', 'l_v'])
 
-        while True:
+        try: 
+            while True:
 
-            print("Starting the virtuous train cycle! generation: {}".format(self.gen))
+                print("Starting the virtuous train cycle! generation: {}".format(self.gen))
 
-            print("Using model at {}".format(self.checkpoint_paths[-1]))
+                print("Using model at {}".format(self.checkpoint_paths[-1]))
 
-            print("Using the latest train_example at {}".format(self.train_examples_paths[-1]))
-            time.sleep(1)
-            old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
-            
-            train_examples = self.generate_train_examples(self.checkpoint_paths[-1], old_train_examples, verbose)
-            path = self.save_train_examples(train_examples, filename = 'gen' + f'{self.gen}' + '.npz')
-            self.train_examples_paths.append(path)
-            self.log_message("newer train examples were made using gen {}".format(self.gen))
-            self.load_checkpoint(self.checkpoint_paths[-1])
+                print("Using the latest train_example at {}".format(self.train_examples_paths[-1]))
+                time.sleep(1)
+                old_train_examples = self.load_train_examples(self.train_examples_paths[-1], 'generate')
+                
+                train_examples = self.generate_train_examples(self.checkpoint_paths[-1], old_train_examples, verbose)
+                path = self.save_train_examples(train_examples, filename = 'gen' + f'{self.gen}' + '.npz')
+                self.train_examples_paths.append(path)
+                self.log_message("newer train examples were made using gen {}".format(self.gen))
+                self.load_checkpoint(self.checkpoint_paths[-1])
 
-            #Train the model
-            self.train(train_examples, summary_writer, loss_writer)
-            f.flush()
-            self.log_message("gen {} was trained. Entering gen {}..".format(self.gen, self.gen + 1))
-            self.gen += 1
-            #free up the space
-            del train_examples
-            path = self.save_checkpoint('c', filename= 'gen' + f'{self.gen}' + '.pt')
-            self.checkpoint_paths.append(path)
+                #Train the model
+                self.train(train_examples, summary_writer, loss_writer)
+                f.flush()
+                self.log_message("gen {} was trained. Entering gen {}..".format(self.gen, self.gen + 1))
+                self.gen += 1
+                #free up the space
+                del train_examples
+                path = self.save_checkpoint('c', filename= 'gen' + f'{self.gen}' + '.pt')
+                self.checkpoint_paths.append(path)
+        
+        except KeyboardInterrupt:
+            handle_ctrl_c()
+
 
             
     def save_itself(self, savennmodelaswell = False):

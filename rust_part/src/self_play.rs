@@ -16,6 +16,9 @@ use crate::hnefgame::board::state::BoardState;
 use rand::distr::weighted::WeightedIndex;
 use tch::CModule;
 use std::time::Instant;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::sync::mpsc::{self, TryRecvError};
 
 
 fn generate_training_example<T: BoardState>(
@@ -40,7 +43,20 @@ fn generate_training_example<T: BoardState>(
 }
 
 pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose: bool) 
--> Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>{
+-> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String>{
+
+    let (tx, rx) = mpsc::channel();
+    let user_input_thread = thread::spawn(move || {
+        let mut input = String::new();
+        loop {
+            std::io::stdin().read_line(&mut input).expect("Failed to read line");
+            if input.trim() == "exit" {
+                tx.send(()).expect("Failed to send exit signal");
+                break;
+            }
+            input.clear();
+        }
+    });
 
     let mut training_data = Vec::new();
 
@@ -56,6 +72,16 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
         let mut policy_history = Vec::new();
 
         loop {
+
+            match rx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    println!("Exiting...");
+                    user_input_thread.join().expect("Failed to join user input thread");
+                    return Err("User exited".to_string());
+                }
+                _ => {}
+            }
+
             let move_time = Instant::now();
             let player = game.state.side_to_play;
 
@@ -116,5 +142,5 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
         }
 
     }
-    training_data
+    Ok(training_data)
 }
