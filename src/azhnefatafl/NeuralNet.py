@@ -381,7 +381,7 @@ class NNetWrapper():
             pickle.dump(self, f)
         print("wrapper saved! To load, use load_wrapper function")
     
-    def change_arg(self, argname: Literal['lr','dropout','epochs','batch_size','cuda','num_channels','maxlen','numGamesPerGen'], new):
+    def change_arg(self, argname: Literal['lr','dropout','epochs','batch_size','cuda','num_channels','maxlen','numGamesPerGen', 'mcts'], new):
         if not isinstance(argname, str):
             print("Please provide a string")
             return
