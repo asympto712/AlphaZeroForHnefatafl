@@ -25,19 +25,40 @@ args = {
     'mcts': 100,
 }
 
+"""
+To create a new wrapper instance and train it from scratch..
+wrapper = azh.NNetWrapper(args, game)
+wrapper.learn(verbose=False) <- your choice. True will display the moves, boards,.. False will not
+
+"""
+
+"""
+To load a wrapper and start training where you left it..
+wrapper = azh.load_wrapper(WrapperName)
+wrapper.learn(verbose=False) <- your choice.
+"""
+
+"""
+To change one of the args..
+wrapper.change_arg(ArgName, newvalue)
+This will log the change.
+"""
+
+"""
+To visualize the training process via tensorboard..
+In your separate terminal, open the virtual env and
+tensorboard --logdir=agents/(name of the wrapper that you want to see)/vcycle
+Then go to whatever localhost they say..
+If you get the error: No module named 'imghdr'
+Try python -m pip install standard-imghdr
+"""
+
 # wrapper = azh.NNetWrapper(args, game)
 # wrapper.learn(verbose=False) #your choice
-# wrapper.save_itself()
+
 
 wrapper = azh.load_wrapper("test6")
 wrapper.change_arg("batch_size", 20)
 wrapper.change_arg("numGamesPerGen", 2)
 wrapper.learn(verbose = True)
 
-
-"""
-If you want to pick up where you left,
-wrapper = azh.load_wrapper(wrapper_name)
-wrapper.learn()
-It automatically loads the latest model and train examples
-"""

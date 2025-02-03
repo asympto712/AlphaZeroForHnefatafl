@@ -315,7 +315,7 @@ class NNetWrapper():
         start_time = time.time()
         # signal.signal(signal.SIGINT, handle_ctrl_c)
 
-        summary_writer = SummaryWriter("vcycle")
+        summary_writer = SummaryWriter(log_dir=os.path.join('agents', self.name, 'vcycle'))
         loss_record_path = os.path.join('agents', f'{self.name}', "loss_record.csv")
         f = open(loss_record_path, "a", newline="")
         loss_writer = csv.writer(f)
@@ -349,7 +349,7 @@ class NNetWrapper():
                 self.checkpoint_paths.append(path)
         
         except KeyboardInterrupt:
-            handle_ctrl_c()
+            handle_user_exit()
 
 
             
