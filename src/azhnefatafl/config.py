@@ -13,6 +13,6 @@ Args = {
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
     'maxlen': 20000,
-    'numGamesPerGen': 1,
+    'numGamesPerGen': 100,
     'mcts': 100,
 }

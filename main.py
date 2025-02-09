@@ -14,7 +14,7 @@ def ask_verbose():
     return verbose
 
 def ask_maxgen():
-    ui = input("Do you want to set a limit on how many generations will be generated?(y/n)")
+    ui = input("Do you want to set a limit on the maximum count of the generation that will be generated?(y/n)")
     while True:
         if ui.lower() == 'n':
             maxgen = None
@@ -39,7 +39,7 @@ def ask_maxgen():
 def func1():
     verbose = ask_verbose()
     maxgen = ask_maxgen()
-    wrapper = azh.NNetWrapper(azh.Game, azh.Args)
+    wrapper = azh.NNetWrapper(azh.Args, azh.Game)
     wrapper.learn(verbose=verbose, maxgen = maxgen)
 
 def func2():

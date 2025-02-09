@@ -42,9 +42,7 @@ Try python -m pip install standard-imghdr
 # wrapper = azh.NNetWrapper(args, game)
 # wrapper.learn(verbose=False) #your choice
 
-
-wrapper = azh.load_wrapper("test6")
-wrapper.change_arg("batch_size", 20)
-wrapper.change_arg("numGamesPerGen", 2)
-wrapper.learn(verbose = True)
+wrapper = azh.NNetWrapper(args, game)
+wrapper.learn("agents/Musk/models/gen1.pt", "agents/Musk/train_examples/gen0.npz", verbose = True, maxgen = 3)
+wrapper.save_itself()
 
