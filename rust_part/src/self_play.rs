@@ -9,11 +9,11 @@ use crate::hnefgame::game::GameOutcome::{Win, Draw};
 use crate::hnefgame::game::GameStatus::Over;
 use crate::hnefgame::play::Play;
 use rand::prelude::*;
-use rand::rng;
+use rand::thread_rng;
 use crate::mcts::mcts;
 use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
-use rand::distr::weighted::WeightedIndex;
+use rand::distributions::WeightedIndex;
 use tch::CModule;
 use std::time::Instant;
 use std::sync::{Arc, Mutex};
@@ -94,7 +94,7 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
             let policy = mcts(&nnmodel, &game, 100);
             policy_history.push(policy.clone());
 
-            let mut rng = rng();
+            let mut rng = thread_rng();
             let dist = WeightedIndex::new(&policy).expect("Invalid distribution");
             let action = dist.sample(&mut rng) as u32;
             let str_action: &str = &action_to_str(&action);

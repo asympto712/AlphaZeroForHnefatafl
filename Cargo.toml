@@ -5,11 +5,13 @@ edition = "2021"
 
 [dependencies]
 primitive-types = "0.13.1"
-rand = "0.9.0"
+rand = "0.8.5"
 tch = "0.18.1"
 pyo3 = { version = "0.23.4", features = ["extension-module"] }
 numpy = "0.23.0"
 ndarray = "0.16.1"
+threadpool = "1.8.1"
+rv = "0.18.0"
 
 [[bin]]
 name = "main"
