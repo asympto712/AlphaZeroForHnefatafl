@@ -157,7 +157,6 @@ impl BoardGeometry {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::hnefgame::board::geometry::BoardGeometry;
     use crate::hnefgame::tiles::Tile;
     use crate::hnefgame::utils::check_tile_vec;

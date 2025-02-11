@@ -135,8 +135,8 @@ mod tests {
     use crate::hnefgame::play::Play;
     use crate::hnefgame::preset::{boards, rules};
     use crate::hnefgame::tiles::Tile;
+    use crate::hashset;
     use std::collections::HashSet;
-    use crate::hnefgame::utils::hashset;
     
     #[test]
     fn test_iter_plays() {

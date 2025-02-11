@@ -82,6 +82,7 @@ impl<T: Default + Copy, const N: usize> Default for FixedSizeQueue<T, N> {
 }
 
 #[cfg(test)]
+#[macro_export]
 /// Creates a [`std::collections::HashSet`] containing the arguments, similar to [`vec!`].
 macro_rules! hashset {
     ($( $x: expr ),* ) => {

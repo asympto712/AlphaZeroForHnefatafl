@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::hnefgame::game::Game;
 use crate::hnefgame::game::GameOutcome::{Draw, Win};
 use crate::hnefgame::game::GameStatus::{Ongoing, Over};
@@ -18,6 +20,8 @@ use threadpool::ThreadPool;
 use std::sync::{Arc,Mutex};
 use rv::prelude::Dirichlet;
 use rand::thread_rng;
+#[allow(unused_imports)]
+use std::time::Instant;
 
 
 
@@ -56,6 +60,10 @@ pub enum Node {
     Term(Term),
 }
 
+enum ExploreResult<T: BoardState> {
+    Notr(usize, Action, GameState<T>),
+    Term(usize, f32),
+}
 
 impl Notr{
     fn new(
@@ -130,10 +138,13 @@ impl Term {
 }
 
 impl<T: BoardState + Send + 'static> Tree<T> {
-    pub fn new(game: &Game<T>, nnmodel: Arc<CModule>) -> Self {
+    pub fn new(game: &Game<T>, nnmodel: &CModule) -> Self {
 
         let game_logic = game.logic.clone();
         let root_game_state = game.state.clone();
+        if root_game_state.status != Ongoing {
+            panic!("The game must be ongoing to start the MCTS search");
+        }
         let (valid_actions, pi, _) = model_predict(&game.state, &nnmodel, &game_logic);
         let mut action_counts = HashMap::with_capacity(valid_actions.len());
         let mut action_probs = HashMap::with_capacity(valid_actions.len());
@@ -169,6 +180,8 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         pi: Vec<f32>) 
         -> usize {
 
+        // let start = Instant::now();
+
         let mut par_node = self.refs[parent_num].borrow_mut();
         let parent = match &mut *par_node {
             Node::Notr(notr) => notr,
@@ -181,16 +194,18 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         parent.add_child(action, num);
         drop(par_node);
         self.refs.push(Rc::new(RefCell::new(Node::Notr(new_notr))));
+
+        // let duration = start.elapsed();
+        // println!("adding node took {}micro secs", duration.as_micros());
         num
     }
 
-    fn add_term(&mut self, parent_num: usize, action: Action) -> usize{
+    fn add_term(&mut self, parent_num: usize, action: Action, value: f32) -> usize{
         let mut par_node = self.refs[parent_num].borrow_mut();
         let parent = match &mut *par_node {
             Node::Notr(notr) => notr,
             _ => panic!("Parent must be a Node::Notr"),
         };
-        let value: f32 = 1.0;
         let par_depth = parent.depth;
         let num = self.refs.len();
         let new_term = Term::new(num, parent_num, &action, value, par_depth + 1);
@@ -220,9 +235,9 @@ impl<T: BoardState + Send + 'static> Tree<T> {
 
     //This function starts from a node, traverse the tree until it finds an unseen (pre)node,
     //and returns the tuple of (leaf node, action) just before the unseen node.
-    fn explore(&self, node: usize, game_state: GameState<T>) -> Option<(usize, Action, GameState<T>)> {
+    fn explore(&self, node: usize, game_state: GameState<T>) -> ExploreResult<T> {
         match &*self.refs[node].borrow() {
-            Node::Term(_) => None,
+            Node::Term(term) => ExploreResult::Term(node, term.value),
             Node::Notr(notr) => {
                 // let mut rng = rng();
                 // let action = notr.valid_actions.choose(&mut rng).unwrap();
@@ -236,13 +251,14 @@ impl<T: BoardState + Send + 'static> Tree<T> {
 
                 let play_string = action_to_str(action);
                 let play: Play = get_ai_play(&play_string);
-                let _ = self.game_logic.do_play(play, game_state);
+                let play_result = self.game_logic.do_play(play, game_state).unwrap();
+                let next_state = play_result.new_state;
 
                 let next_node = notr.children.get(action);
                 let num = notr.num;
                 match next_node {
-                    None => Some((num, *action, game_state)),
-                    Some(node) => self.explore(*node, game_state),
+                    None => ExploreResult::Notr(num, *action, next_state),
+                    Some(node) => self.explore(*node, next_state),
                 }
             }
         }
@@ -250,43 +266,75 @@ impl<T: BoardState + Send + 'static> Tree<T> {
 
     // Starting from the new leaf, update the node's parent's visits and action counts.
     fn backup(&self, notr_num: usize, reward: f32){
-        let node = self.refs[notr_num].borrow_mut();
-        if let Node::Notr(notr) = &*node{
-            match notr.parent{
-                None => return,
-                Some((par_action, par_n)) => {
-                    let mut parent = self.refs[par_n].borrow_mut();
-                    if let Node::Notr(par) = &mut *parent {
-                        par.visits += 1.0;
-                        // par.action_counts.entry(par_action).and_modify(|e| {*e += 1.0});
-                        if let Some(q) = par.action_qs.get_mut(&par_action) {
-                            if let Some(count) = par.action_counts.get(&par_action) {
-                                *q = (*count * *q + reward) / (*count + 1.0);
-                            }
-                        }
-                    
-                        if let Some(result) = par.action_counts.get_mut(&par_action) {
-                            *result += 1.0;
+
+        // let start = Instant::now();
+
+        let mut current_num = notr_num;
+        let mut current_reward = reward;
+
+        loop {
+            let current_node = &*self.refs[current_num].borrow();
+            let par = match current_node {
+                Node::Notr(notr) => notr.parent,
+                Node::Term(term) => term.parent,
+            };
+            if let Some((par_action, par_n)) = par{
+                let mut parent = self.refs[par_n].borrow_mut();
+                if let Node::Notr(par) = &mut *parent {
+                    par.visits += 1.0;
+                    if let Some(q) = par.action_qs.get_mut(&par_action) {
+                        if let Some(count) = par.action_counts.get(&par_action) {
+                            *q = (*count * *q + current_reward) / (*count + 1.0);
                         }
                     }
-                    drop(parent);
-                    self.backup(par_n, -1.0 * reward);
+                    if let Some(result) = par.action_counts.get_mut(&par_action) {
+                        *result += 1.0;
+                    }
                 }
-            }
-        } 
+                current_num = par_n;
+                current_reward = -1.0 * current_reward;
+            } else { break }
+        }
+
+        // while let Node::Notr(notr) = &*self.refs[current_num].borrow() {
+        //     match notr.parent {
+        //         None => break,
+        //         Some((par_action, par_n)) => {
+        //             let mut parent = self.refs[par_n].borrow_mut();
+        //             if let Node::Notr(par) = &mut *parent {
+        //                 par.visits += 1.0;
+        //                 if let Some(q) = par.action_qs.get_mut(&par_action) {
+        //                     if let Some(count) = par.action_counts.get(&par_action) {
+        //                         *q = (*count * *q + current_reward) / (*count + 1.0);
+        //                     }
+        //                 }
+        //                 if let Some(result) = par.action_counts.get_mut(&par_action) {
+        //                     *result += 1.0;
+        //                 }
+        //             }
+        //             current_num = par_n;
+        //             current_reward = -1.0 * current_reward;
+        //         }
+        //     }
+        // }
+
+        // let duration = start.elapsed();
+        // println!("Backup took {}micro secs", duration.as_micros());
     }
 
 
-    pub fn mcts_par(&mut self, nnmodel: Arc<CModule>, num_iter: usize) -> Vec<f32> {
-        let pool = ThreadPool::new(2);
+    pub fn mcts_par(&mut self, nnmodel: Arc<CModule>, num_iter: usize, num_workers: usize) -> Vec<f32> {
+        let pool = ThreadPool::new(num_workers);
         let (tx, rx) = mpsc::channel();
         let tx = Arc::new(Mutex::new(tx));
         // let shared_nnmodel = Arc::new(nnmodel);
         let shared_logic = Arc::new(self.game_logic);
+        let num_iter_per_worker: usize = num_iter / num_workers as usize;
 
-        for _ in 0..num_iter{
+        for _ in 0..num_iter_per_worker{
             
-            let mut leaves: Vec<(usize, Action, GameState<T>)> = Vec::with_capacity(2);
+            // let start1 = Instant::now();
+            let mut leaves: Vec<(usize, Action, GameState<T>)> = Vec::with_capacity(num_workers);
             let mut count: u8 = 0;
             // We want to use separate threads to run inference using the NN model,
             // but it is possible that we don't encounter leaf node that is not a terminal node for a long time.
@@ -296,45 +344,43 @@ impl<T: BoardState + Send + 'static> Tree<T> {
                 self.root_dirichlet();
                 let result = self.explore(0, root_state);
                 match result{
-                    None => (),
-                    Some((notr_num, action, game_state)) => {
+                    ExploreResult::Term(term_num, reward ) => {
+                        self.backup(term_num, -1.0 * reward);
+                    },
+                    ExploreResult::Notr(notr_num, action, game_state) => {
                         //Replace this with the game logic to determine if the new node is a terminal
                         // let notr_node = self.refs[notr_num].borrow();
                         
                         let option = calc_reward(game_state, self.game_logic);
                         match option {
                             Some(reward) => {
-                                let leaf_num = self.add_term(notr_num, action);
-                                self.backup(leaf_num, reward);
+                                let leaf_num = self.add_term(notr_num, action, reward);
+                                self.backup(leaf_num, -1.0 * reward);
                             },
                             None => {
                                 leaves.push((notr_num, action, game_state));
                             }
                         }
-
-                        // if let Node::Notr(notr) = &*notr_node {
-                        //     if notr.depth == DEPTH_LIMIT{
-                        //         drop(notr_node);
-                        //         let leaf_num = self.add_term(notr_num, action);
-                        //         let reward = 1.0;
-                        //         self.backup(leaf_num, reward);
-                        //     } else {
-                        //         leaves.push((notr_num, action, game_state));
-                        //     }
-                        // } else {
-                        //     panic!("Tree.explore should have returned Term, which is not supposed to happen!")
-                        // }
                     }
                 }
                 count += 1;
+
+                // Debugging
                 // println!("count: {}", count);
+                // std::thread::sleep(std::time::Duration::from_millis(1));
             }
+            // let duration1 = start1.elapsed();
+            // println!("search took {}micro secs", duration1.as_micros());
             
             let leaves_length = leaves.len();
 
+            // let start2 = Instant::now();
+
             for (old_leaf, action, game_state) in leaves{
 
+                // Debugging
                 // println!("{}, {}", old_leaf, action);
+                // std::thread::sleep(std::time::Duration::from_millis(1));
 
                 // set up threads to run inference, send the outputs
                 let tx = Arc::clone(&tx);
@@ -349,12 +395,24 @@ impl<T: BoardState + Send + 'static> Tree<T> {
                 });
             }
 
+            // let duration2 = start2.elapsed();
+            // println!("inference took {}micro secs", duration2.as_micros());
+
+            // let start3 = Instant::now();
+
             for (old_leaf, action, valid_actions, pi, value) in rx.iter().take(leaves_length) {
                 // println!("{}, {}, {}", old_leaf, action, reward);
                 let new_leaf = self.add_notr(old_leaf, action, valid_actions, pi);
-                self.backup(new_leaf, value);
+
+                // model_predict returns the value from the perspective of the player at the new leaf node.
+                // It must be reversed to the perspective of the player at the old leaf node.
+                let reward = -1.0 * value;
+                self.backup(new_leaf, reward);
                 // println!("backup complete");
             }
+
+            // let duration3 = start3.elapsed();
+            // println!("The rest took {}micro secs", duration3.as_micros());
             // println!("...");
         }
 
@@ -368,6 +426,37 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         self.get_improved_policy()
     }
 
+    pub fn mcts_notpar(&mut self, nnmodel: &CModule, num_iter: usize) -> Vec<f32> {
+
+        for _ in 0..num_iter{
+            let root_state = self.root_game_state.clone();
+            self.root_dirichlet();
+            let result = self.explore(0, root_state);
+            match result{
+                ExploreResult::Term(term_num,reward) => {
+                    self.backup(term_num, -1.0 * reward);
+                },
+                ExploreResult::Notr(notr_num, action, game_state) => {
+                    
+                    let option = calc_reward(game_state, self.game_logic);
+                    match option {
+                        Some(reward) => {
+                            let new_leaf = self.add_term(notr_num, action, reward);
+                            self.backup(new_leaf, -1.0 * reward);
+                        },
+                        None => {
+                            let (valid_actions, pi, value) = model_predict(&game_state, &nnmodel, &self.game_logic);
+                            let new_leaf = self.add_notr(notr_num, action, valid_actions, pi);
+                            let reward = -1.0 * value;
+                            self.backup(new_leaf, reward);
+                        },
+                    }
+                }
+            }
+        }
+        self.get_improved_policy()
+    }
+
     fn get_improved_policy(&self) -> Vec<f32>{
         let root = self.refs[0].borrow();
         let policy_size = 7_usize.pow(4);
@@ -378,6 +467,13 @@ impl<T: BoardState + Send + 'static> Tree<T> {
                 policy[*action as usize] = count / count_sum;
             }
         }
+
+        // For Debugging.
+        // if let Node::Notr(notr) = &*root{
+        //     for (action, count) in &notr.action_counts {
+        //         println!("Action: {}, Count: {}", action_to_str(action), count);
+        //     }
+        // }
         policy
     }
 }
@@ -494,3 +590,49 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
 
     return (valid_actions, pi, value)
 }
+
+// run the root paralllelization of MCTS.
+pub fn mcts_root_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize) -> Vec<f32> {
+
+    let shared_model = Arc::new(nnmodel);
+    let pool = ThreadPool::new(num_workers);
+    let (tx, rx) = mpsc::channel();
+    let tx = Arc::new(Mutex::new(tx));
+    let num_iter_per_worker: usize = num_iter / num_workers as usize;
+
+    for _ in 0..num_workers {
+        let tx = Arc::clone(&tx);
+        let nnmodel = Arc::clone(&shared_model);
+        let game = game.clone();
+
+        pool.execute(move || {
+
+            let mut local_tree = Tree::new(&game, &nnmodel);
+            let policy = local_tree.mcts_notpar(&nnmodel, num_iter_per_worker);
+            tx.lock().unwrap().send(policy).expect("Failed to send policy");
+        });
+    }
+
+    let mut final_policy = vec![0.0; 7_usize.pow(4)];
+    for policy in rx.iter().take(num_workers) {
+        for (i, p) in policy.iter().enumerate() {
+            final_policy[i] += p;
+        }
+    }
+
+    for p in &mut final_policy {
+        *p /= num_workers as f32;
+    }
+    final_policy
+}
+
+pub fn mcts_notpar<T: BoardState + Send + 'static>(nnmodel: &CModule, game: &Game<T>, num_iter: usize) -> Vec<f32> {
+    let mut tree = Tree::new(game, nnmodel);
+    tree.mcts_notpar(nnmodel, num_iter)
+}
+
+pub fn mcts_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize) -> Vec<f32> {
+    let mut tree = Tree::new(game, &nnmodel);
+    tree.mcts_par(Arc::clone(&nnmodel), num_iter, num_workers)
+}
+

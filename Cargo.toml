@@ -18,8 +18,12 @@ name = "main"
 path = "./rust_part/src/main.rs"
 
 [[bin]]
-name = "test"
-path = "./rust_part/src/test.rs"
+name = "mcts_performance_test"
+path = "./rust_part/src/mcts_performance_test.rs"
+
+[[bin]]
+name = "duel"
+path = "./rust_part/src/duel.rs"
 
 [lib]
 name = "azhnefatafl"

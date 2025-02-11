@@ -2,6 +2,7 @@ pub mod self_play;
 pub mod support;
 pub mod mcts;
 pub mod mcts_par;
+
 pub mod hnefgame {
     pub mod board;
     pub mod game;

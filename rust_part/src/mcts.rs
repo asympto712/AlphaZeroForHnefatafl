@@ -1,5 +1,5 @@
-#![allow(non_snake_case)]
 #![allow(unused_imports)]
+#![allow(dead_code)]
 
 use crate::hnefgame::game::{Game, SmallBasicGame};
 use crate::hnefgame::game::GameOutcome::{Draw, Win};
@@ -110,15 +110,16 @@ fn search<T: BoardState>(game_state: GameState<T>, node: &mut Node, nnmodel: &CM
     let play_string = action_to_str(action);
     let play: Play = get_ai_play(&play_string);
 
-    let _ = game_logic.do_play(play,game_state); //check this again
-        
+    let play_result = game_logic.do_play(play,game_state).unwrap(); //check this again
+    let next_state = play_result.new_state;
+
     if !node.children.contains_key(action) {         
-        let reward = expand(node, &action, &game_state, &nnmodel, &game_logic);
+        let reward = expand(node, &action, &next_state, &nnmodel, &game_logic);
         return -1.0 * reward
     }
 
     let next_node = node.children.get_mut(action).unwrap();
-    let reward = search(game_state, &mut next_node.borrow_mut(), &nnmodel, game_logic);
+    let reward = search(next_state, &mut next_node.borrow_mut(), &nnmodel, game_logic);
 
     if let Some(q) = node.action_qs.get_mut(action) {
         if let Some(count) = node.action_counts.get(action) {

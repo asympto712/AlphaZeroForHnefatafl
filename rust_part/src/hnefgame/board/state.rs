@@ -349,7 +349,7 @@ mod tests {
     use crate::hnefgame::pieces::Side::{Attacker, Defender};
     use crate::hnefgame::preset::boards;
     use crate::hnefgame::tiles::Tile;
-    use crate::hnefgame::utils::hashset;
+    use crate::hashset;
 
     #[test]
     fn test_from_str() {

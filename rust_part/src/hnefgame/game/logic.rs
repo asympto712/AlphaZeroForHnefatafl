@@ -901,7 +901,7 @@ mod tests {
     use crate::hnefgame::utils::check_tile_vec;
     use std::str::FromStr;
     use crate::hnefgame::error::PlayInvalid;
-    use crate::hnefgame::utils::hashset;
+    use crate::hashset;
 
     const TEST_RULES: Ruleset = Ruleset {
         slow_pieces: PieceSet::from_piece_type(King),
