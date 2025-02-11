@@ -14,6 +14,7 @@ threadpool = "1.8.1"
 rv = "0.18.0"
 egui = "0.31.0"
 eframe = "0.31.0"
+chrono = "0.4.39"
 
 [[bin]]
 name = "main"

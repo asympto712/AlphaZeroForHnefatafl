@@ -35,6 +35,9 @@ pub struct Tree<T: BoardState + Send>{
     pub refs: Vec<Rc<RefCell<Node>>>,
     game_logic: GameLogic,
     root_game_state: GameState<T>,
+    c_puct: f32,
+    alpha: f64,
+    eps: f32,
 }
 pub struct Notr {
     num: usize,
@@ -105,12 +108,12 @@ impl Notr{
         self.children.insert(action, child);
     }
 
-    fn uct_value(&self, action: &Action) -> f32 {
+    fn uct_value(&self, action: &Action, c_puct: f32) -> f32 {
         
         let q = self.action_qs.get(action).unwrap();
         let count = self.action_counts.get(action).unwrap();
         let p = self.action_probs.get(action).unwrap();
-        return *q + C_PUCT * p * self.visits.sqrt() / (1.0 + *count);
+        return *q + c_puct * p * self.visits.sqrt() / (1.0 + *count);
     }
 
     pub fn display_info(&self) {
@@ -140,7 +143,7 @@ impl Term {
 }
 
 impl<T: BoardState + Send + 'static> Tree<T> {
-    pub fn new(game: &Game<T>, nnmodel: &CModule) -> Self {
+    pub fn new(game: &Game<T>, nnmodel: &CModule, c_puct: f32, alpha: f64, eps: f32) -> Self {
 
         let game_logic = game.logic.clone();
         let root_game_state = game.state.clone();
@@ -172,7 +175,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
 
         let mut refs: Vec<Rc<RefCell<Node>>> = Vec::new();
         refs.push(Rc::new(RefCell::new(Node::Notr(root))));
-        Self { refs, game_logic, root_game_state}
+        Self { refs, game_logic, root_game_state, c_puct, alpha, eps}
     }
 
     fn add_notr(&mut self,
@@ -221,14 +224,12 @@ impl<T: BoardState + Send + 'static> Tree<T> {
     fn root_dirichlet(&self, dir: &Dirichlet) {
         let mut root = self.refs[0].borrow_mut();
         if let Node::Notr(root) = &mut *root{
-            // let num_valid_actions = root.valid_actions.len();
-            // let dir = Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap();
             let mut rng = thread_rng();
             let dir_values: Vec<f64> = dir.draw(&mut rng);
             for (i, action) in root.valid_actions.iter().enumerate() {
                 let noise = dir_values[i] as f32;
                 let p = root.action_probs.get_mut(action).unwrap();
-                *p = (1.0 - EPS) * *p + EPS * noise;
+                *p = (1.0 - self.eps) * *p + self.eps * noise;
             }
         }
 
@@ -247,7 +248,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
                 let action = cur_valid_actions
                 .iter()
                 .max_by(|a,b| {
-                    notr.uct_value(a).partial_cmp(&notr.uct_value(b)).unwrap()
+                    notr.uct_value(a, self.c_puct).partial_cmp(&notr.uct_value(b, self.c_puct)).unwrap()
                 })
                 .unwrap();
 
@@ -337,7 +338,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         let root = self.refs[0].borrow();
         let dir = if let Node::Notr(root) = &*root{
             let num_valid_actions = root.valid_actions.len();
-            Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap()
+            Dirichlet::symmetric(self.alpha, num_valid_actions).unwrap()
         } else {
             panic!("The root of the tree should be a notr");
         };
@@ -444,7 +445,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         let root = self.refs[0].borrow();
         let dir = if let Node::Notr(root) = &*root{
             let num_valid_actions = root.valid_actions.len();
-            Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap()
+            Dirichlet::symmetric(self.alpha, num_valid_actions).unwrap()
         } else {
             panic!("The root of the tree should be a notr");
         };
@@ -614,7 +615,7 @@ fn model_predict<T: BoardState>(game_state: &GameState<T>, nnmodel: &CModule, ga
 }
 
 // run the root paralllelization of MCTS.
-pub fn mcts_root_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize) -> Vec<f32> {
+pub fn mcts_root_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize, c_puct: f32, alpha: f64, eps: f32) -> Vec<f32> {
 
     let shared_model = Arc::new(nnmodel);
     let pool = ThreadPool::new(num_workers);
@@ -629,7 +630,7 @@ pub fn mcts_root_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game
 
         pool.execute(move || {
 
-            let mut local_tree = Tree::new(&game, &nnmodel);
+            let mut local_tree = Tree::new(&game, &nnmodel, c_puct, alpha, eps);
             let policy = local_tree.mcts_notpar(&nnmodel, num_iter_per_worker);
             tx.lock().unwrap().send(policy).expect("Failed to send policy");
         });
@@ -648,13 +649,13 @@ pub fn mcts_root_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game
     final_policy
 }
 
-pub fn mcts_notpar<T: BoardState + Send + 'static>(nnmodel: &CModule, game: &Game<T>, num_iter: usize) -> Vec<f32> {
-    let mut tree = Tree::new(game, nnmodel);
+pub fn mcts_notpar<T: BoardState + Send + 'static>(nnmodel: &CModule, game: &Game<T>, num_iter: usize, c_puct: f32, alpha: f64, eps: f32) -> Vec<f32> {
+    let mut tree = Tree::new(game, nnmodel, c_puct, alpha, eps);
     tree.mcts_notpar(nnmodel, num_iter)
 }
 
-pub fn mcts_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize) -> Vec<f32> {
-    let mut tree = Tree::new(game, &nnmodel);
+pub fn mcts_par<T: BoardState + Send + 'static>(nnmodel: Arc<CModule>, game: &Game<T>, num_iter: usize, num_workers: usize, c_puct: f32, alpha: f64, eps: f32) -> Vec<f32> {
+    let mut tree = Tree::new(game, &nnmodel, c_puct, alpha, eps);
     tree.mcts_par(Arc::clone(&nnmodel), num_iter, num_workers)
 }
 

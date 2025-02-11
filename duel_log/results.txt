@@ -1,0 +1,104 @@
+Date and Time: 2025-02-11 05:57:02
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Defender MCTS algorithm: mcts_par_mcts_par
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 0
+Defender capture count: 2
+
+
+Date and Time: 2025-02-11 06:05:48
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Defender MCTS algorithm: mcts_par_mcts_par
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 0
+Defender capture count: 2
+
+
+Date and Time: 2025-02-11 06:12:49
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Defender MCTS algorithm: mcts_par_mcts_par
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 0
+Defender capture count: 1
+
+
+Date and Time: 2025-02-11 06:20:11
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Defender MCTS algorithm: mcts_par_mcts_par
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 1
+Defender capture count: 1
+
+
+Date and Time: 2025-02-11 06:20:55
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Defender MCTS algorithm: mcts_par_mcts_par
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 0
+Defender capture count: 1
+
+
+Date and Time: 2025-02-11 07:07:49
+Total games: 1
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt
+Attacker MCTS algorithm: mcts_par_mcts_par
+Attacker MCTS iterations: 100, c_puct: 0.3, alpha: 0.4, eps: 0.4
+Defender MCTS algorithm: mcts_par_mcts_par
+Defender MCTS iterations: 100, c_puct: 0.3, alpha: 0.4, eps: 0.4
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 0
+Defender capture count: 1
+
+

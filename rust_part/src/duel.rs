@@ -21,13 +21,83 @@ use std::time::Instant;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{self, Sender};
 use eframe::egui;
+use egui::{RichText, FontId};
+use std::fs::File;
+use std::io::Write;
+use std::fs;
+
+fn main() {
+    let agent_attacker: &str = "300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt";
+    let agent_defender: &str = "300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt";
+
+    //Choose from...
+    //"mcts_mcts", "mcts_par_mcts_notpar", "mcts_par_mcts_par", "mcts_par_mcts_root_par"
+    //  |                   |                       |                   |
+    //  -> The one we were using all along for training. Doesn't implement Dirichlet noise for the exploration from the root.
+    //                      |                       |                   |
+    //                      -> Unparallelized version from mcts_par.rs Uses a bit different data structure. Implements Dirichlet noise.
+    //                                              |                   |
+    //                                               -> Parallelization ver1 (leaf-parallelization) of mcts_par_mcts_notpar
+    //                                                                  |
+    //                                                                   -> Parallelization ver2(root parallelization) of mcts_par_mcts_notpar                                 
+    let attacker_mcts_alg: &str = "mcts_par_mcts_par";
+    let defender_mcts_alg: &str = "mcts_par_mcts_par";
+
+    let attacker_mcts_iter: usize = 100;
+    let defender_mcts_iter: usize = 100;
+    let no_games: u32 = 1;
+    let num_workers: usize = 4;
+    let verbose: bool = false; // keep this false
+
+    // Below are the parameters for the MCTS algorithm.
+    // c_puct is the exploration constant.
+    // It is a hyperparameter that determines how much the MCTS algorithm should explore.
+
+    // alpha is the Dirichlet noise parameter. 
+    // It is a hyperparameter that supposedly should reflect the game's action space(?).
+    // For the reference, it was kept 0.3 for chess, 0.03 for Go in AlphaZero.
+
+    // eps is the Dirichlet noise parameter.
+    // It is a hyperparameter that determines how much noise should be added to the prior probabilities.
+    // Should be between (0,1). Higher value means more noise.
+    let att_c_puct: f32 = 0.3;
+    let att_alpha: f64 = 0.4;
+    let att_eps: f32 = 0.4;
+    let def_c_puct: f32 = 0.3;
+    let def_alpha: f64 = 0.4;
+    let def_eps: f32 = 0.4;
+
+    duel_app(agent_attacker,
+        agent_defender,
+        no_games,
+        verbose,
+        attacker_mcts_alg,
+        attacker_mcts_iter,
+        defender_mcts_alg,
+        defender_mcts_iter,
+        num_workers,
+        att_c_puct,
+        att_alpha,
+        att_eps,
+        def_c_puct,
+        def_alpha,
+        def_eps);    
+}
 
 struct MyApp {
     tot_games: u32,
     attacker: String,
     defender: String,
     attacker_mcts_alg: String,
+    attacker_mcts_iter: usize,
+    att_c_puct: f32,
+    att_alpha: f64,
+    att_eps: f32,
     defender_mcts_alg: String,
+    defender_mcts_iter: usize,
+    def_c_puct: f32,
+    def_alpha: f64,
+    def_eps: f32,
     game_num: u32,
     winsatt: u32,
     winsdef: u32,
@@ -49,7 +119,15 @@ impl Default for MyApp {
             attacker: "".to_string(),
             defender: "".to_string(),
             attacker_mcts_alg: "".to_string(),
+            attacker_mcts_iter: 0,
+            att_c_puct: 0.0,
+            att_alpha: 0.0,
+            att_eps: 0.0,
             defender_mcts_alg: "".to_string(),
+            defender_mcts_iter: 0,
+            def_c_puct: 0.0,
+            def_alpha: 0.0,
+            def_eps: 0.0,
             game_num: 0,
             winsatt: 0,
             winsdef: 0,
@@ -61,6 +139,7 @@ impl Default for MyApp {
             current_turn: 0,
             attacker_capture_count: 0,
             defender_capture_count: 0,
+
             board: BitfieldBoardState::default(),
         }
     }
@@ -95,6 +174,30 @@ impl MyApp {
         self.defender_capture_count = defender_capture_count;
         self.board = board;
     }
+
+    fn save_results(&self, filename: &str) {
+        fs::create_dir_all("duel_log").expect("Unable to create duel_log directory");
+        let mut file = File::options().append(true).create(true).open(filename).expect("Unable to open or create file");
+        let now = chrono::Local::now();
+        writeln!(file, "Date and Time: {}", now.format("%Y-%m-%d %H:%M:%S")).expect("Unable to write data");
+        writeln!(file, "Total games: {}", self.tot_games).expect("Unable to write data");
+        writeln!(file, "Attacker: {}", self.attacker).expect("Unable to write data");
+        writeln!(file, "Defender: {}", self.defender).expect("Unable to write data");
+        writeln!(file, "Attacker MCTS algorithm: {}", self.attacker_mcts_alg).expect("Unable to write data");
+        writeln!(file, "Attacker MCTS iterations: {}, c_puct: {}, alpha: {}, eps: {}", self.attacker_mcts_iter, self.att_c_puct, self.att_alpha, self.att_eps).expect("Unable to write data");
+        writeln!(file, "Defender MCTS algorithm: {}", self.defender_mcts_alg).expect("Unable to write data");
+        writeln!(file, "Defender MCTS iterations: {}, c_puct: {}, alpha: {}, eps: {}", self.defender_mcts_iter, self.def_c_puct, self.def_alpha, self.def_eps).expect("Unable to write data");
+        writeln!(file, "Game number: {}", self.game_num).expect("Unable to write data");
+        writeln!(file, "Attacker wins: {}", self.winsatt).expect("Unable to write data");
+        writeln!(file, "Defender wins: {}", self.winsdef).expect("Unable to write data");
+        writeln!(file, "Draws: {}", self.draws).expect("Unable to write data");
+        writeln!(file, "Minimum game length: {}", self.minlength).expect("Unable to write data");
+        writeln!(file, "Maximum game length: {}", self.maxlength).expect("Unable to write data");
+        writeln!(file, "Average game length: {}", self.avelength).expect("Unable to write data");
+        writeln!(file, "Attacker capture count: {}", self.attacker_capture_count).expect("Unable to write data");
+        writeln!(file, "Defender capture count: {}", self.defender_capture_count).expect("Unable to write data");
+        writeln!(file, "\n").expect("unable to write data");
+    }
 }
 
 struct AppWrapper {
@@ -105,25 +208,62 @@ impl eframe::App for AppWrapper{
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let app = self.app.lock().unwrap();
         egui::CentralPanel::default().show(ctx, |ui| {
+            if ui.button("Save Results").clicked() {
+                app.save_results("duel_log/results.txt");
+            }
+            ui.label("You can push this button to save the result to duel_log/results.txt.");
+
+            ui.separator();
             ui.heading("metadata");
             ui.label(format!("Total games: {}", app.tot_games));
-            ui.label(format!("Attacker: {}", app.attacker));
-            ui.label(format!("Defender: {}", app.defender));
-            ui.label(format!("Attacker MCTS algorithm: {}", app.attacker_mcts_alg));
-            ui.label(format!("Defender MCTS algorithm: {}", app.defender_mcts_alg));
+            ui.horizontal(|ui| {
+                ui.label("Attacker: ");
+                ui.label(format!("{}", app.attacker));
+            });
+            ui.horizontal(|ui|{
+                ui.label(format!("MCTS Alg: {}", app.attacker_mcts_alg));
+                ui.label(format!("Iterations: {}", app.attacker_mcts_iter));
+                ui.label(format!("c_puct: {}", app.att_c_puct));
+                ui.label(format!("alpha: {}", app.att_alpha));
+                ui.label(format!("eps: {}", app.att_eps));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Defender: ");
+                ui.label(format!("{}", app.defender));
+            });
+            ui.horizontal(|ui|{
+                ui.label(format!("MCTS Alg: {}", app.defender_mcts_alg));
+                ui.label(format!("Iterations: {}", app.defender_mcts_iter));
+                ui.label(format!("c_puct: {}", app.def_c_puct));
+                ui.label(format!("alpha: {}", app.def_alpha));
+                ui.label(format!("eps: {}", app.def_eps));
+            });
+            ui.separator();
             ui.heading("Game Results");
-            ui.label(format!("Game number: {}", app.game_num));
-            ui.label(format!("Attacker wins: {}", app.winsatt));
-            ui.label(format!("Defender wins: {}", app.winsdef));
-            ui.label(format!("Draws: {}", app.draws));
-            ui.label(format!("Minimum game length: {}", app.minlength));
-            ui.label(format!("Maximum game length: {}", app.maxlength));
-            ui.label(format!("Average game length: {}", app.avelength));
+            ui.horizontal(|ui|{
+                ui.label(format!("Game number: {}", app.game_num));
+                ui.label(format!("Attacker wins: {}", app.winsatt));
+                ui.label(format!("Defender wins: {}", app.winsdef));
+                ui.label(format!("Draws: {}", app.draws));
+            });
+            ui.separator();
+            ui.heading("Game Stats");
+            ui.horizontal(|ui|{
+                ui.label(format!("Minimum length: {}", app.minlength));
+                ui.label(format!("Maximum length: {}", app.maxlength));
+                ui.label(format!("Average length: {}", app.avelength));
+            });
+            ui.horizontal(|ui|{
+                ui.label(format!("Attacker capture count: {}", app.attacker_capture_count));
+                ui.label(format!("Defender capture count: {}", app.defender_capture_count));
+            });
+            ui.separator();
+            ui.heading("Current Game State");
             ui.label(format!("Move time: {}ms", app.move_time));
             ui.label(format!("Current turn: {}", app.current_turn));
-            ui.label(format!("Attacker capture count: {}", app.attacker_capture_count));
-            ui.label(format!("Defender capture count: {}", app.defender_capture_count));
-            ui.label(format!("Board: \n{}", app.board));
+            ui.centered_and_justified(|ui| {
+                ui.monospace(RichText::new(format!("Board: \n{}", app.board)).font(FontId::proportional(20.0)));
+            });
             ui.ctx().request_repaint();
         });
     }
@@ -155,7 +295,10 @@ fn mcts_do_alg<T: BoardState + Send + 'static>(
     nnmodel: Arc<CModule>,
     game: &Game<T>,
     num_iter:usize,
-    num_workers: usize) 
+    num_workers: usize,
+    c_puct: f32,
+    alpha: f64,
+    eps: f32) 
     -> Vec<f32>{
 
     match mcts_alg {
@@ -164,15 +307,15 @@ fn mcts_do_alg<T: BoardState + Send + 'static>(
             policy
         },
         MCTSAlg::MctsParMctsNotpar => {
-            let policy = mcts_par::mcts_notpar(&nnmodel, game, num_iter);
+            let policy = mcts_par::mcts_notpar(&nnmodel, game, num_iter, c_puct, alpha, eps);
             policy
         },
         MCTSAlg::MctsParMctsPar => {
-            let policy = mcts_par::mcts_par(nnmodel, game, num_iter, num_workers);
+            let policy = mcts_par::mcts_par(nnmodel, game, num_iter, num_workers, c_puct, alpha, eps);
             policy
         },
         MCTSAlg::MctsParMctsRootPar => {
-            let policy = mcts_par::mcts_root_par(nnmodel, game, num_iter, num_workers);
+            let policy = mcts_par::mcts_root_par(nnmodel, game, num_iter, num_workers, c_puct, alpha, eps);
             policy
         },
     }
@@ -181,11 +324,18 @@ fn mcts_do_alg<T: BoardState + Send + 'static>(
 fn duel(agent_attacker: &str,
         agent_defender: &str,
         no_games: u32,
-        mcts_iterations: usize,
         verbose: bool,
         attacker_mcts_alg: &str,
+        attacker_mcts_iter: usize,
         defender_mcts_alg: &str,
+        defender_mcts_iter: usize,
         num_workers: usize,
+        att_c_puct: f32,
+        att_alpha: f64,
+        att_eps: f32,
+        def_c_puct: f32,
+        def_alpha: f64,
+        def_eps: f32,
         tx: Sender<(u32, u32, u32, u32, u32, u32, f32, f32, u32, u32, u32, BitfieldBoardState<u64>)>) {
 
     let attacker_mctsalg = attacker_mcts_alg.parse::<MCTSAlg>().unwrap();
@@ -225,9 +375,7 @@ fn duel(agent_attacker: &str,
         game_num += 1;
 
         loop {
-
             let tx = tx.clone();
-
             let min_length = game_length.iter().min().unwrap_or(&0);
             let max_length = game_length.iter().max().unwrap_or(&0);
 
@@ -242,13 +390,21 @@ fn duel(agent_attacker: &str,
             let start = Instant::now();
             let play: Play = match player {
                 Side::Attacker => {
-                    let policy = mcts_do_alg(&attacker_mctsalg, Arc::clone(&nnmodel_attacker), &game, mcts_iterations, num_workers);
+                    let policy: Vec<f32> = mcts_do_alg(
+                        &attacker_mctsalg,
+                        Arc::clone(&nnmodel_attacker),
+                        &game,
+                        attacker_mcts_iter,
+                        num_workers,
+                        att_c_puct,
+                        att_alpha,
+                        att_eps);
 
                     // println!("{}", policy.len());
                     // let sum: f32 = policy.iter().sum();
                     // println!("Sum of policy values: {}", sum);
 
-                    let action = 
+                    let action: u32 = 
                     policy.iter()
                     .enumerate()
                     .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
@@ -265,19 +421,17 @@ fn duel(agent_attacker: &str,
                     
                 },
                 Side::Defender => {
-                    let policy = mcts_do_alg(&defender_mctsalg, Arc::clone(&nnmodel_defender), &game, mcts_iterations, num_workers);
+                    let policy: Vec<f32> = mcts_do_alg(
+                        &defender_mctsalg,
+                        Arc::clone(&nnmodel_defender),
+                        &game,
+                        defender_mcts_iter,
+                        num_workers,
+                        def_c_puct,
+                        def_alpha,
+                        def_eps);
 
-                    // Debugging
-                    // println!("{}", policy.len());
-                    // let sum: f32 = policy.iter().sum();
-                    // println!("Sum of policy values: {}", sum);
-                    // for (index, value) in policy.iter().enumerate() {
-                    //     if *value != 0.0 {
-                    //         println!("Index: {}, Value: {}", index, value);
-                    //     }
-                    // }
-
-                    let action = 
+                    let action: u32 = 
                     policy.iter()
                     .enumerate()
                     .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
@@ -386,9 +540,24 @@ fn duel(agent_attacker: &str,
     println!("Defender has captured: {} in total", defender_capture_count);
 }
 
-fn main() {
-    let agent_attacker = "300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt";
-    let agent_defender = "300lim_9gen_NoCapReward_0.3Draw/models/gen8.pt";
+fn duel_app(
+    agent_attacker: &str,
+    agent_defender: &str,
+    no_games: u32,
+    verbose: bool,
+    attacker_mcts_alg: &str,
+    attacker_mcts_iter: usize,
+    defender_mcts_alg: &str,
+    defender_mcts_iter: usize,
+    num_workers: usize,
+    att_c_puct: f32,
+    att_alpha: f64,
+    att_eps: f32,
+    def_c_puct: f32,
+    def_alpha: f64,
+    def_eps: f32) 
+    {
+    
     let attacker_path = format!("agents/{}", agent_attacker);
     let defender_path = format!("agents/{}", agent_defender);
 
@@ -399,24 +568,41 @@ fn main() {
     // Change if necessary
     {
         let mut app = app.lock().unwrap();
-        app.tot_games = 10;
+        app.tot_games = no_games;
         app.attacker = agent_attacker.to_string();
         app.defender = agent_defender.to_string();
-        app.attacker_mcts_alg = "mcts_par_mcts_par".to_string();
-        app.defender_mcts_alg = "mcts_par_mcts_par".to_string();
+        app.attacker_mcts_alg = attacker_mcts_alg.to_string();
+        app.attacker_mcts_iter = attacker_mcts_iter;
+        app.att_alpha = att_alpha;
+        app.att_c_puct = att_c_puct;
+        app.att_eps = att_eps;
+        app.defender_mcts_alg = defender_mcts_alg.to_string();
+        app.defender_mcts_iter = defender_mcts_iter;
+        app.def_alpha = def_alpha;
+        app.def_c_puct = def_c_puct;
+        app.def_eps = def_eps;
     }
     let app_clone = Arc::clone(&app);
 
+    let attacker_mcts_alg_clone = attacker_mcts_alg.to_string();
+    let defender_mcts_alg_clone = defender_mcts_alg.to_string();
     std::thread::spawn(move || {
         duel(
             &attacker_path,
             &defender_path,
-            10,
-            100,
-            false,
-            "mcts_par_mcts_par",
-            "mcts_par_mcts_par",
-            4,
+            no_games,
+            verbose,
+            &attacker_mcts_alg_clone,
+            attacker_mcts_iter,
+            &defender_mcts_alg_clone,
+            defender_mcts_iter,
+            num_workers,
+            att_c_puct,
+            att_alpha,
+            att_eps,
+            def_c_puct,
+            def_alpha,
+            def_eps,
             tx);
     });
 
@@ -457,10 +643,13 @@ fn main() {
         }
     });
 
-    let native_options = eframe::NativeOptions::default();
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 700.0]),
+        ..Default::default()
+    };
     let _ = eframe::run_native(
         "duel results recorder",
-        native_options,
+        options,
         Box::new(|_cc| Ok(Box::new(AppWrapper{app: Arc::clone(&app) }))),
     ).unwrap();
 }
