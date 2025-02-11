@@ -23,7 +23,7 @@ use winapi::um::libloaderapi::LoadLibraryA;
 
 fn main() {
 
-    let path = CString::new("F:/cancer/SciComp/en312/Lib/site-packages/torch/lib/torch_cuda.dll").unwrap();
+    let path = CString::new("Path/to/lib/torch_cuda.dll").unwrap();
     
     unsafe {
         LoadLibraryA(path.as_ptr() as *const c_char);
