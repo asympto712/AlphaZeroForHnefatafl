@@ -28,6 +28,8 @@ use std::time::Instant;
 type Action = u32;
 
 const C_PUCT: f32 = 0.3;
+const ALPHA: f64 = 0.4; // Dirichlet noise parameter alpha. 
+const EPS: f32 = 0.4; // Dirichlet noise parameter epsilon.
 
 pub struct Tree<T: BoardState + Send>{
     pub refs: Vec<Rc<RefCell<Node>>>,
@@ -160,7 +162,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
             num: 0,
             parent: None,
             children: HashMap::with_capacity(valid_actions.len()),
-            visits: 0.0,
+            visits: 1.0,
             valid_actions,
             action_counts,
             action_probs,
@@ -190,7 +192,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         let par_depth = parent.depth;
         let num = self.refs.len();
     
-        let new_notr = Notr::new(num, parent_num, &action, 0.0, valid_actions, pi, par_depth + 1);
+        let new_notr = Notr::new(num, parent_num, &action, 1.0, valid_actions, pi, par_depth + 1);
         parent.add_child(action, num);
         drop(par_node);
         self.refs.push(Rc::new(RefCell::new(Node::Notr(new_notr))));
@@ -216,17 +218,17 @@ impl<T: BoardState + Send + 'static> Tree<T> {
     }
 
     // Add Dirichlet noise to the actions from the root node.
-    fn root_dirichlet(&self) {
+    fn root_dirichlet(&self, dir: &Dirichlet) {
         let mut root = self.refs[0].borrow_mut();
         if let Node::Notr(root) = &mut *root{
-            let num_valid_actions = root.valid_actions.len();
-            let dir = Dirichlet::symmetric(0.3, num_valid_actions).unwrap();
+            // let num_valid_actions = root.valid_actions.len();
+            // let dir = Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap();
             let mut rng = thread_rng();
             let dir_values: Vec<f64> = dir.draw(&mut rng);
             for (i, action) in root.valid_actions.iter().enumerate() {
                 let noise = dir_values[i] as f32;
                 let p = root.action_probs.get_mut(action).unwrap();
-                *p = (1.0 - 0.25) * *p + 0.25 * noise;
+                *p = (1.0 - EPS) * *p + EPS * noise;
             }
         }
 
@@ -331,6 +333,16 @@ impl<T: BoardState + Send + 'static> Tree<T> {
         let shared_logic = Arc::new(self.game_logic);
         let num_iter_per_worker: usize = num_iter / num_workers as usize;
 
+        // Defining the Dirichlet noise for the root node.
+        let root = self.refs[0].borrow();
+        let dir = if let Node::Notr(root) = &*root{
+            let num_valid_actions = root.valid_actions.len();
+            Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap()
+        } else {
+            panic!("The root of the tree should be a notr");
+        };
+        drop(root);
+
         for _ in 0..num_iter_per_worker{
             
             // let start1 = Instant::now();
@@ -341,7 +353,7 @@ impl<T: BoardState + Send + 'static> Tree<T> {
             // The additional condition [count < 10] is to avoid such cases. 
             while leaves.len() < leaves.capacity() && count < 10{
                 let root_state = self.root_game_state.clone();
-                self.root_dirichlet();
+                self.root_dirichlet(&dir);
                 let result = self.explore(0, root_state);
                 match result{
                     ExploreResult::Term(term_num, reward ) => {
@@ -428,9 +440,19 @@ impl<T: BoardState + Send + 'static> Tree<T> {
 
     pub fn mcts_notpar(&mut self, nnmodel: &CModule, num_iter: usize) -> Vec<f32> {
 
+        // Defining the Dirichlet noise for the root node.
+        let root = self.refs[0].borrow();
+        let dir = if let Node::Notr(root) = &*root{
+            let num_valid_actions = root.valid_actions.len();
+            Dirichlet::symmetric(ALPHA, num_valid_actions).unwrap()
+        } else {
+            panic!("The root of the tree should be a notr");
+        };
+        drop(root);
+
         for _ in 0..num_iter{
             let root_state = self.root_game_state.clone();
-            self.root_dirichlet();
+            self.root_dirichlet(&dir);
             let result = self.explore(0, root_state);
             match result{
                 ExploreResult::Term(term_num,reward) => {
