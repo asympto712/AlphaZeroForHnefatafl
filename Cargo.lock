@@ -452,6 +452,7 @@ dependencies = [
  "chrono",
  "eframe",
  "egui",
+ "libc",
  "ndarray 0.16.1",
  "numpy",
  "primitive-types",
@@ -460,6 +461,7 @@ dependencies = [
  "rv",
  "tch",
  "threadpool",
+ "winapi",
 ]
 
 [[package]]

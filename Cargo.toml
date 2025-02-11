@@ -16,10 +16,16 @@ rv = "0.18.0"
 egui = "0.31.0"
 eframe = "0.31.0"
 chrono = "0.4.39"
+libc = "0.2.169"
+winapi = { version = "0.3.9", features = ["winuser","libloaderapi"] }
 
 [[bin]]
 name = "main"
 path = "./rust_part/src/main.rs"
+
+[[bin]]
+name = "test"
+path = "./rust_part/src/test.rs"
 
 [[bin]]
 name = "mcts_performance_test"
