@@ -6,6 +6,8 @@ pub mod self_play;
 pub mod support;
 pub mod mcts;
 pub mod hnefgame;
+pub mod mcts_par;
+pub mod mcts_cmp;
 
 use hnefgame::game::{Game, SmallBasicGame};
 use hnefgame::game::GameOutcome::{Draw, Win};

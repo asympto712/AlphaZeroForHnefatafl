@@ -1,24 +1,28 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
+
 use crate::hnefgame::game::state::GameState;
 use crate::hnefgame::pieces::Side;
 use crate::hnefgame::game::{SmallBasicGame, Game};
-use crate::support::{action_to_str, board_to_matrix, get_ai_play,write_to_file};
 use crate::hnefgame::game::GameOutcome::{Win, Draw};
 use crate::hnefgame::game::GameStatus::Over;
 use crate::hnefgame::play::Play;
-use rand::prelude::*;
-use rand::thread_rng;
-use crate::mcts::mcts;
 use crate::hnefgame::preset::{boards, rules};
 use crate::hnefgame::board::state::BoardState;
+use crate::mcts::mcts;
+use crate::support::{action_to_str, board_to_matrix, get_ai_play,write_to_file};
+use crate::mcts_cmp::{MCTSAlg, mcts_do_alg};
+
+use rand::prelude::*;
+use rand::thread_rng;
 use rand::distributions::WeightedIndex;
 use tch::CModule;
 use std::time::Instant;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::sync::mpsc::{self, TryRecvError};
+use std::str::FromStr;
 
 
 fn generate_training_example<T: BoardState>(
@@ -42,8 +46,19 @@ fn generate_training_example<T: BoardState>(
     training_examples
 }
 
-pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose: bool) 
--> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String>{
+pub fn self_play(
+    nnmodel: Arc<CModule>,
+    no_games: i32,
+    mcts_iterations: usize,
+    verbose: bool,
+    mcts_alg: &str,
+    num_workers: usize,
+    c_puct: f32,
+    alpha: f64,
+    eps: f32,
+) -> Result<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>, String>{
+
+    let mcts_alg = MCTSAlg::from_str(mcts_alg).expect("Invalid MCTS algorithm: Choose from mcts_mcts, mcts_par_mcts_notpar, mcts_par_mcts_par, mcts_par_mcts_root_par");
 
     let (tx, rx) = mpsc::channel();
     let user_input_thread = thread::spawn(move || {
@@ -72,7 +87,6 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
         let mut policy_history = Vec::new();
 
         loop {
-
             match rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
                     println!("Exiting...");
@@ -91,7 +105,16 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
                 println!("{}", game.state.board);
             }
 
-            let policy = mcts(&nnmodel, &game, 100);
+            // let policy = mcts(&nnmodel, &game, 100);
+            let policy = mcts_do_alg(
+                &mcts_alg,
+                Arc::clone(&nnmodel),
+                &game,
+                mcts_iterations,
+                num_workers,
+                c_puct,
+                alpha,
+                eps);
             policy_history.push(policy.clone());
 
             let mut rng = thread_rng();
@@ -106,11 +129,9 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
 
             match game.do_play(play) {
                 Ok(status) => {
-
                     if verbose{
                         println!("Move took: {:?}", move_time.elapsed());
                     }
-
                     if let Over(outcome) = status {
                         match outcome {
                             Draw(reason) => {
@@ -140,7 +161,6 @@ pub fn self_play(nnmodel: CModule, no_games: i32, mcts_iterations: u32, verbose:
                 }
             }
         }
-
     }
     Ok(training_data)
 }

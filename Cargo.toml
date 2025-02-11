@@ -2,6 +2,7 @@
 name = "azhnefatafl"
 version = "0.1.0"
 edition = "2021"
+build = "./rust_part/src/build.rs"
 
 [dependencies]
 primitive-types = "0.13.1"

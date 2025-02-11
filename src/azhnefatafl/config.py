@@ -15,4 +15,14 @@ Args = {
     'maxlen': 20000,
     'numGamesPerGen': 100,
     'mcts': 100,
+    'mcts_alg': "mcts_par_mcts_par",
+    'num_workers': 4,
+    'c_puct': 0.3,
+    'alpha': 0.3,
+    'eps': 0.25,
 }
+
+"""
+mcts_alg can be chosen from: mcts_mcts, mcts_par_mcts_notpar, mcts_par_mcts_par, mcts_par_mcts_root_par
+For details, see rust_part/src/duel.rs
+"""

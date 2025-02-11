@@ -207,7 +207,7 @@ class NNetWrapper():
         for _ in t:
             t.set_description(f"Iteration: {_ + 1}\n")
             # Generate new training examples using self-play
-            new_examples = self_play_function(model_path, 1, self.args['mcts'],verbose)
+            new_examples = self_play_function(model_path, 1, self.args['mcts'], verbose, self.args['mcts_alg'], self.args['num_workers'], self.args['c_puct'], self.args['alpha'], self.args['eps'])
             # add the new_examples to the right side of the deque (if length exceeds the maxlen, it will discard older examples from the left)
             train_examples.extend(new_examples)
 
