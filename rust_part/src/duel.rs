@@ -60,6 +60,9 @@ fn main() {
     // eps is the Dirichlet noise parameter.
     // It is a hyperparameter that determines how much noise should be added to the prior probabilities.
     // Should be between (0,1). Higher value means more noise.
+
+    // Beware that, this change only applies to mcts_par_mcts_notpar, mcts_par_mcts_par, mcts_par_mcts_root_par.
+    // For mcts_mcts, the constant parameters are used.
     let att_c_puct: f32 = 0.3;
     let att_alpha: f64 = 0.4;
     let att_eps: f32 = 0.4;
