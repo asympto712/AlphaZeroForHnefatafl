@@ -121,3 +121,22 @@ Attacker capture count: 173
 Defender capture count: 165
 
 
+Date and Time: 2025-02-11 18:12:26
+Total games: 20
+Attacker: 300lim_9gen_NoCapReward_0.3Draw/models/gen9.pt
+Defender: 300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt
+Attacker MCTS algorithm: mcts_par_mcts_root_par
+Attacker MCTS iterations: 400, c_puct: 0.3, alpha: 0.4, eps: 0.4
+Defender MCTS algorithm: mcts_par_mcts_root_par
+Defender MCTS iterations: 400, c_puct: 0.3, alpha: 0.4, eps: 0.4
+Game number: 1
+Attacker wins: 0
+Defender wins: 0
+Draws: 0
+Minimum game length: 0
+Maximum game length: 0
+Average game length: 0
+Attacker capture count: 1
+Defender capture count: 5
+
+

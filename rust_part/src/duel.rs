@@ -34,16 +34,13 @@ use winapi::um::libloaderapi::LoadLibraryA;
 
 
 fn main() {
+    // let path = CString::new("F:/cancer/SciComp/en312/Lib/site-packages/torch/lib/torch_cuda.dll").unwrap();    
+    // unsafe {
+    //     LoadLibraryA(path.as_ptr() as *const c_char);
+    // }
 
-    let path = CString::new("F:/cancer/SciComp/en312/Lib/site-packages/torch/lib/torch_cuda.dll").unwrap();
-    
-    unsafe {
-        LoadLibraryA(path.as_ptr() as *const c_char);
-    }
-
-
-    let agent_attacker: &str = "300lim_10gen_0.5MaxMove_CapReward/models/gen1.pt";
-    let agent_defender: &str = "300lim_10gen_0.5MaxMove_CapReward/models/gen7.pt";
+    let agent_attacker: &str = "300lim_9gen_NoCapReward_0.3Draw/models/gen9.pt";
+    let agent_defender: &str = "300lim_9gen_NoCapReward_0.3Draw/models/gen1.pt";
 
     //Choose from...
     //"mcts_mcts", "mcts_par_mcts_notpar", "mcts_par_mcts_par", "mcts_par_mcts_root_par"
@@ -58,9 +55,9 @@ fn main() {
     let attacker_mcts_alg: &str = "mcts_par_mcts_root_par";
     let defender_mcts_alg: &str = "mcts_par_mcts_root_par";
 
-    let attacker_mcts_iter: usize = 100;
-    let defender_mcts_iter: usize = 100;
-    let no_games: u32 = 10;
+    let attacker_mcts_iter: usize = 400;
+    let defender_mcts_iter: usize = 400;
+    let no_games: u32 = 20;
     let num_workers: usize = 4;
     let verbose: bool = false; // keep this false
 
@@ -286,58 +283,6 @@ impl eframe::App for AppWrapper{
         });
     }
 }
-
-// #[derive(Debug)]
-// enum MCTSAlg {
-//     MctsMcts,
-//     MctsParMctsNotpar,
-//     MctsParMctsPar,
-//     MctsParMctsRootPar,
-// }
-
-// impl std::str::FromStr for MCTSAlg {
-//     type Err = String;
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         match s {
-//             "mcts_mcts" => Ok(MCTSAlg::MctsMcts),
-//             "mcts_par_mcts_notpar" => Ok(MCTSAlg::MctsParMctsNotpar),
-//             "mcts_par_mcts_par" => Ok(MCTSAlg::MctsParMctsPar),
-//             "mcts_par_mcts_root_par" => Ok(MCTSAlg::MctsParMctsRootPar),
-//             _ => Err("Invalid MCTS algorithm".to_string()),
-//         }
-//     }
-// }
-
-// fn mcts_do_alg<T: BoardState + Send + 'static>(
-//     mcts_alg: &MCTSAlg,
-//     nnmodel: Arc<CModule>,
-//     game: &Game<T>,
-//     num_iter:usize,
-//     num_workers: usize,
-//     c_puct: f32,
-//     alpha: f64,
-//     eps: f32) 
-//     -> Vec<f32>{
-
-//     match mcts_alg {
-//         MCTSAlg::MctsMcts => {
-//             let policy = mcts::mcts(&nnmodel, game, num_iter);
-//             policy
-//         },
-//         MCTSAlg::MctsParMctsNotpar => {
-//             let policy = mcts_par::mcts_notpar(&nnmodel, game, num_iter, c_puct, alpha, eps);
-//             policy
-//         },
-//         MCTSAlg::MctsParMctsPar => {
-//             let policy = mcts_par::mcts_par(nnmodel, game, num_iter, num_workers, c_puct, alpha, eps);
-//             policy
-//         },
-//         MCTSAlg::MctsParMctsRootPar => {
-//             let policy = mcts_par::mcts_root_par(nnmodel, game, num_iter, num_workers, c_puct, alpha, eps);
-//             policy
-//         },
-//     }
-// }
 
 fn duel(agent_attacker: &str,
         agent_defender: &str,
