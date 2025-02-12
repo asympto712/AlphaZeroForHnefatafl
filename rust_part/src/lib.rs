@@ -23,9 +23,22 @@ use pyo3::prelude::*;
 use pyo3::exceptions::PyKeyboardInterrupt;
 use tch::CModule;
 
+
+use std::ffi::CString;
+use std::os::raw::c_char;
+use winapi::um::libloaderapi::LoadLibraryA;
+
+
 #[pyfunction]
 fn self_play_function<'py> (nnmodel_path: &str, no_games: i32, mcts_iterations: usize, verbose: bool, mcts_alg: &str, num_workers: usize, c_puct: f32, alpha: f64, eps: f32) 
 -> PyResult<Vec<(Vec<Vec<u8>>, Vec<f32>, i32, i32)>> {
+
+    let path = CString::new("F:/cancer/SciComp/en312/Lib/site-packages/torch/lib/torch_cuda.dll").unwrap();
+    
+    unsafe {
+        LoadLibraryA(path.as_ptr() as *const c_char);
+    }
+
 
     let mut nnmodel = 
     if tch::Cuda::is_available() {
