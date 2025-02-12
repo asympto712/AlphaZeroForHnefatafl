@@ -23,11 +23,13 @@ use winapi::um::libloaderapi::LoadLibraryA;
 
 fn main() {
 
+    /* 
     let path = CString::new("Path/to/lib/torch_cuda.dll").unwrap();
     
     unsafe {
         LoadLibraryA(path.as_ptr() as *const c_char);
     }
+    */
 
     let num_iter: usize = 400;
     let num_workers: usize = 4;

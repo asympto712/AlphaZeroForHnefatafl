@@ -35,15 +35,16 @@ use winapi::um::libloaderapi::LoadLibraryA;
 
 fn main() {
 
+
     let path = CString::new("F:/cancer/SciComp/en312/Lib/site-packages/torch/lib/torch_cuda.dll").unwrap();
     
     unsafe {
         LoadLibraryA(path.as_ptr() as *const c_char);
     }
 
-
-    let agent_attacker: &str = "300lim_10gen_0.5MaxMove_CapReward/models/gen1.pt";
-    let agent_defender: &str = "300lim_10gen_0.5MaxMove_CapReward/models/gen7.pt";
+    
+    let agent_attacker: &str = "10gen_100lim/models/gen0.pt";
+    let agent_defender: &str = "10gen_100lim/models/gen10.pt";
 
     //Choose from...
     //"mcts_mcts", "mcts_par_mcts_notpar", "mcts_par_mcts_par", "mcts_par_mcts_root_par"
@@ -53,15 +54,15 @@ fn main() {
     //                      -> Unparallelized version from mcts_par.rs Uses a bit different data structure. Implements Dirichlet noise.
     //                                              |                   |
     //                                               -> Parallelization ver1 (leaf-parallelization) of mcts_par_mcts_notpar
-    //                                                                  |
+    //                                                                 |
     //                                                                   -> Parallelization ver2(root parallelization) of mcts_par_mcts_notpar                                 
     let attacker_mcts_alg: &str = "mcts_par_mcts_root_par";
     let defender_mcts_alg: &str = "mcts_par_mcts_root_par";
 
-    let attacker_mcts_iter: usize = 100;
-    let defender_mcts_iter: usize = 100;
+    let attacker_mcts_iter: usize = 400;
+    let defender_mcts_iter: usize = 400;
     let no_games: u32 = 10;
-    let num_workers: usize = 4;
+    let num_workers: usize = 8;
     let verbose: bool = false; // keep this false
 
     // Below are the parameters for the MCTS algorithm.

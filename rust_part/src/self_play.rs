@@ -127,11 +127,16 @@ pub fn self_play(
                 println!("{}", str_action);
             }
 
+            if game.state_history.len() == 100 {
+                println!("Game over. Draw: Max moves reached.");
+                let mut training_examples = generate_training_example(&game.state_history, &policy_history, 0);
+                training_data.append(&mut training_examples);
+                break;
+            }
+
             match game.do_play(play) {
                 Ok(status) => {
-                    if verbose{
-                        println!("Move took: {:?}", move_time.elapsed());
-                    }
+                    println!("Move took: {:?}", move_time.elapsed());
                     if let Over(outcome) = status {
                         match outcome {
                             Draw(reason) => {
