@@ -35,6 +35,10 @@ path = "./rust_part/src/mcts_performance_test.rs"
 name = "duel"
 path = "./rust_part/src/duel.rs"
 
+[[bin]]
+name = "mcts_test"
+path = "./rust_part/src/mcts_test.rs"
+
 [lib]
 name = "azhnefatafl"
 path = "./rust_part/src/lib.rs"

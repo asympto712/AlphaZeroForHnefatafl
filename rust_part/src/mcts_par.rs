@@ -27,9 +27,10 @@ use std::time::Instant;
 
 type Action = u32;
 
-const C_PUCT: f32 = 0.3;
-const ALPHA: f64 = 0.4; // Dirichlet noise parameter alpha. 
-const EPS: f32 = 0.4; // Dirichlet noise parameter epsilon.
+// We decided to specify these hyperparameters each time. 12.02. Keigo
+// const C_PUCT: f32 = 0.3;
+// const ALPHA: f64 = 0.4; // Dirichlet noise parameter alpha. 
+// const EPS: f32 = 0.4; // Dirichlet noise parameter epsilon.
 
 pub struct Tree<T: BoardState + Send>{
     pub refs: Vec<Rc<RefCell<Node>>>,
