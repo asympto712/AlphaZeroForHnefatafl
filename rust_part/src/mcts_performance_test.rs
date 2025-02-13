@@ -33,20 +33,21 @@ fn main() {
     }
     */
 
-    // let num_iter: usize = 100;
-    // let num_workers: usize = 4;
-    // let verbose: bool = false;
-    // let c_puct: f32 = 0.3;
-    // let alpha: f64 = 0.4;
-    // let eps: f32 = 0.25;
+    let num_iter: usize = 400;
+    let num_workers: usize = 4;
+    let verbose: bool = false;
+    let c_puct: f32 = 0.3;
+    let alpha: f64 = 0.4;
+    let eps: f32 = 0.25;
 
-    // let _ = test_mcts_mcts(num_iter);
-    // let _ = test_mcts_par_mcts_notpar(num_iter, verbose, c_puct, alpha, eps);
-    // let _ = test_mcts_par_mcts_par(num_iter, num_workers, verbose, c_puct, alpha, eps);
-    // let _ = test_mcts_par_mcts_root_par(num_iter, num_workers, c_puct, alpha, eps);
-    test_log_stats();
+    let _ = test_mcts_mcts(num_iter);
+    let _ = test_mcts_par_mcts_notpar(num_iter, verbose, c_puct, alpha, eps);
+    let _ = test_mcts_par_mcts_par(num_iter, num_workers, verbose, c_puct, alpha, eps);
+    let _ = test_mcts_par_mcts_root_par(num_iter, num_workers, c_puct, alpha, eps);
+    // test_log_stats();
 }
 
+#[allow(dead_code)]
 fn test_log_stats(){
     let verbose = false;
     let c_puct: f32 = 0.3;

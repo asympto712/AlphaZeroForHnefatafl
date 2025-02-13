@@ -1,4 +1,3 @@
-
 use crate::hnefgame::game::Game;
 use crate::hnefgame::board::state::BoardState;
 use crate::mcts;
@@ -6,7 +5,7 @@ use crate::mcts_par;
 use tch::CModule;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MCTSAlg {
     MctsMcts,
     MctsParMctsNotpar,
@@ -27,6 +26,21 @@ impl std::str::FromStr for MCTSAlg {
     }
 }
 
+#[allow(dead_code)]
+impl MCTSAlg {
+    pub fn iter() -> impl Iterator<Item = MCTSAlg> {
+        [
+            MCTSAlg::MctsMcts,
+            MCTSAlg::MctsParMctsNotpar,
+            MCTSAlg::MctsParMctsPar,
+            MCTSAlg::MctsParMctsRootPar,
+        ]
+        .iter()
+        .cloned()
+    }
+}
+
+#[allow(dead_code)]
 pub fn mcts_do_alg<T: BoardState + Send + 'static>(
     mcts_alg: &MCTSAlg,
     nnmodel: Arc<CModule>,
