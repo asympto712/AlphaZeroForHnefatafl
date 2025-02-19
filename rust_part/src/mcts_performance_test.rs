@@ -33,8 +33,8 @@ fn main() {
     }
     */
 
-    let num_iter: usize = 400;
-    let num_workers: usize = 4;
+    let num_iter: usize = 5000;
+    let num_workers: usize = 2;
     let verbose: bool = false;
     let c_puct: f32 = 0.3;
     let alpha: f64 = 0.4;
